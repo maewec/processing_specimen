@@ -3,14 +3,16 @@
 """
 Обработка набора фронтов трещин
 """
-
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
 import copy
 
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
+from matplotlib.colors import ListedColormap, BoundaryNorm
+
 class Specimen:
-    def __init__(self, list_fronts, list_names=None):
+    def __init__(self, list_fronts, list_names=None, rad_obr=None, rad_def=None):
         """Определение фронтов КИН
         Parameters:
             list_fronts - список путей к контурам
@@ -25,6 +27,9 @@ class Specimen:
         self.table = dict()
         for i in range(len(list_fronts)):
             self.table[self.list_names[i]] = self.__read_file(self.list_fronts[i])
+
+        self.rad_obr = rad_obr
+        self.rad_def = rad_def
 
     NAMES_COUNTUR = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
     NAME_INDEX = ['ang']
@@ -94,3 +99,40 @@ class Specimen:
                 obj_copy.table[name][contour] = self.__moving_average(arr, num=num)
         return obj_copy
 
+    def plot_geom_front(self, cont='c3'):
+        """Печать геометрии фронтов трещины с нанесенными значениями КИН"""
+        
+        fig = plt.figure(figsize=(15, 15))
+        ax = fig.add_subplot(projection='polar')
+
+        rad_max = 0
+        
+        for name in self.table:
+            tab = self.table[name]
+            deg = np.array(np.deg2rad(tab.index))
+            rad = np.array(tab['rad'])
+            kin = (np.array(tab[cont])[:-1] + np.array(tab[cont])[1:])/2
+
+            points = np.array([deg, rad]).T.reshape(-1, 1, 2)
+            segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+            norm = plt.Normalize(kin.min(), kin.max())
+            lc = LineCollection(segments, cmap='jet', norm=norm)
+            lc.set_array(kin)
+            lc.set_linewidth(2)
+            line = ax.add_collection(lc)
+            ax.grid(False)
+            if rad_max < rad.max():
+                rad_max = rad.max()
+
+        ax.set_theta_zero_location('S')
+        ax.set_theta_direction(1)
+        ax.set_ylim(0, rad_max+0.5)
+
+        div = 100
+        deg360 = np.linspace(0, 2*np.pi, div)
+        if self.rad_obr:
+            plt.plot(deg360, np.full(div, self.rad_obr), 'k')
+        if self.rad_def:
+            plt.plot(deg360, np.full(div, self.rad_def), 'k')
+        
