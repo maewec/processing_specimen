@@ -33,12 +33,23 @@ class Specimen:
         return pd.read_table(path, delim_whitespace=True, names=names,
                 index_col=index_col).drop(columns=drop)
 
+    def plot_fronts(self, cont='all'):
+        for name in self.table:
+            self.plot_front(name, cont)
+
     def plot_front(self, name, cont='all'):
         drop = ['rad', 'z']
-        cur_table = self.table[name]
+        cur_table = self.table[name].drop(columns=drop)
         if name in self.list_names:
             if cont != 'all':
                 cur_table = cur_table[cont]
             cur_table.plot(title=name)
         else:
             Exception('Нет фронта '+name)
+
+    def plot_all_fronts(self, cont='c2'):
+        plt.figure(figsize=(15, 10))
+        for name in self.table:
+            self.table[name][cont].plot(label=name)
+        plt.legend()
+
