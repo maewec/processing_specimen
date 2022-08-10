@@ -53,11 +53,15 @@ class Specimen:
         else:
             Exception('Нет фронта '+name)
 
-    def plot_all_fronts(self, cont='c2'):
-        plt.figure(figsize=(15, 10))
+    def plot_all_fronts(self, cont='c2', return_obj=False):
+        if not return_obj:
+            plt.figure(figsize=(15, 10))
         for name in self.table:
-            self.table[name][cont].plot(label=name)
-        plt.legend()
+            ax = self.table[name][cont].plot(label=name)
+        if not return_obj:
+            plt.legend()
+        else:
+            return ax
 
     @staticmethod
     def __moving_average(array, num=5):
