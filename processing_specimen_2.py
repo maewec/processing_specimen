@@ -12,7 +12,7 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
 
 class Specimen:
-    def __init__(self, list_fronts, list_names=None, rad_obr=None, rad_def=None):
+    def __init__(self, list_fronts, list_names=None, rad_obr=None, rad_def=None, force=None):
         """Определение фронтов КИН
         Parameters:
             list_fronts - список путей к контурам
@@ -29,7 +29,12 @@ class Specimen:
             self.table[self.list_names[i]] = self.__read_file(self.list_fronts[i])
 
         self.rad_obr = rad_obr
+        if self.rad_obr:
+            self.s_obr = np.pi * self.rad_obr ** 2
+        else:
+            self.s_obr = None
         self.rad_def = rad_def
+        self.force = force
 
     NAMES_COUNTUR = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
     NAME_INDEX = ['ang']
@@ -136,3 +141,42 @@ class Specimen:
         if self.rad_def:
             plt.plot(deg360, np.full(div, self.rad_def), 'k')
         
+    @staticmethod
+    def __integral_front(rads, angs, flag_radian=True):
+        """Принимает массивы радиусов и углов, возвращает общую площадь"""
+        if not flag_radian:
+            angs = np.radians(angs)
+        dangs = np.roll(angs, -1) - angs
+        si = rads * np.roll(rads, -1) * np.sin(dangs) / 2
+        return si.sum() 
+
+    def nominal_stress(self, rad_obr=None, force=None):
+        if rad_obr:
+            self.rad_obr = rad_obr
+            self.s_obr = np.pi * self.rad_obr ** 2
+        if force:
+            self.force = force
+
+        if self.rad_obr and self.force:
+            names = list()
+            s_sechs = list()
+            s_noms = list()
+            names.append('nocrack')
+            s_sechs.append(self.s_obr)
+            s_noms.append(self.force / self.s_obr)
+            for name in self.table:
+                deg = np.array(np.deg2rad(self.table[name].index))
+                rad = np.array(self.table[name]['rad'])
+                s_cr = self.__integral_front(rad, deg, flag_radian=True)
+                s_sech = self.s_obr - s_cr
+                s_nom = self.force / s_sech
+                names.append(name)
+                s_sechs.append(s_sech)
+                s_noms.append(s_nom)
+            self.nominal_table = pd.DataFrame({
+                'name': names,
+                's_sech': s_sechs,
+                's_nom': s_noms})
+            self.nominal_table = self.nominal_table.set_index('name')
+            display(self.nominal_table)
+
