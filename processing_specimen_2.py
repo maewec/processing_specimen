@@ -4,6 +4,7 @@
 Обработка набора фронтов трещин
 """
 import copy
+from io import StringIO
 
 import pandas as pd
 import numpy as np
@@ -12,7 +13,7 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
 
 class Specimen:
-    def __init__(self, list_fronts, list_names=None, rad_obr=None, rad_def=None, force=None):
+    def __init__(self, list_fronts, list_names=None, rad_obr=None, rad_def=None, force=None, r_asymmetry=None):
         """Определение фронтов КИН
         Parameters:
             list_fronts - список путей к контурам
@@ -35,6 +36,7 @@ class Specimen:
             self.s_obr = None
         self.rad_def = rad_def
         self.force = force
+        self.r_asymmetry = r_asymmetry
         self.dir_sif = list()
         self.nominal_table = None
 
@@ -197,13 +199,43 @@ class Specimen:
             direct_sif = direct_sif.append(k)
             direct_sif = direct_sif[['rad', contour]]
         direct_sif = direct_sif.rename(columns={contour: 'c'})
-        self.dir_sif.append(SIF(direct_sif, angle))
+        self.dir_sif.append(SIF(direct_sif, angle, self))
         display(direct_sif)
             
 
 
 class SIF:
-    def __init__(self, table, angle):
-        self.table = table
+    def __init__(self, table, angle, specimen):
+        self.sif_table = table
         self.angle = angle
+        self.specimen = specimen
+        self.r_asymmetry = specimen.r_asymmetry
+        self.fract_table = None
+
+    def add_fract(self, text, display_on=False):
+        """Добавить данные фрактографии
+        Три колонки:
+        rad - радиус,
+        n - число циклов,
+        d - прирост за цикл"""
+
+        data = pd.read_table(StringIO(text), sep='\s+', index_col='rad')
+        data = data.sort_index()
+        self.fract_table = data
+        if display_on:
+            display(self.fract_table)
+
+    def concat(self, mpa2kgs=True, display_on=False):
+        """Аппроксимация и совмещение КИН и данных фрактографии"""
+        self.res_table = self.fract_table.copy()
+        self.res_table['sif'] = np.interp(self.fract_table.index,
+                self.sif_table['rad'],
+                self.sif_table['c'])
+        if mpa2kgs:
+            self.res_table['sif'] = self.res_table['sif'] / 9.8
+        if self.r_asymmetry:
+            self.res_table['sif'] = self.res_table['sif'] * (1 - self.r_asymmetry)
+        if display_on:
+            display(self.res_table)
+
 
