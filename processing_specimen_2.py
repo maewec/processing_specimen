@@ -142,6 +142,13 @@ class Specimen:
             plt.plot(deg360, np.full(div, self.rad_obr), 'k')
         if self.rad_def:
             plt.plot(deg360, np.full(div, self.rad_def), 'k')
+
+        # линии снятия значений КИН
+        i = 0
+        for sif in self.dir_sif:
+            ang = sif.angle
+            plt.plot([ang, ang], [0, self.rad_obr], '--', color='r')
+            plt.text(ang, self.rad_obr, 'Путь '+str(i))
         
     @staticmethod
     def __integral_front(rads, angs, flag_radian=True):
@@ -198,5 +205,5 @@ class Specimen:
 class SIF:
     def __init__(self, table, angle):
         self.table = table
-        self.ang = angle
+        self.angle = angle
 
