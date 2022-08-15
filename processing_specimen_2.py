@@ -35,6 +35,8 @@ class Specimen:
             self.s_obr = None
         self.rad_def = rad_def
         self.force = force
+        self.dir_sif = list()
+        self.nominal_table = None
 
     NAMES_COUNTUR = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
     NAME_INDEX = ['ang']
@@ -179,4 +181,22 @@ class Specimen:
                 's_nom': s_noms})
             self.nominal_table = self.nominal_table.set_index('name')
             display(self.nominal_table)
+
+    def create_sif(self, angle, contour):
+        direct_sif = pd.DataFrame()
+        for name in self.table:
+            df = self.table[name]
+            k = df.iloc[(np.abs(df.index-angle)).argsort()[:1]]
+            direct_sif = direct_sif.append(k)
+            direct_sif = direct_sif[['rad', contour]]
+        direct_sif = direct_sif.rename(columns={contour: 'c'})
+        self.dir_sif.append(SIF(direct_sif, angle))
+        display(direct_sif)
+            
+
+
+class SIF:
+    def __init__(self, table, angle):
+        self.table = table
+        self.ang = angle
 
