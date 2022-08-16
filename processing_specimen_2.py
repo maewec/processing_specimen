@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
+from scipy.stats import linregress
 
 class Specimen:
     def __init__(self, list_fronts, list_names=None, rad_obr=None, rad_def=None, force=None, r_asymmetry=None):
@@ -199,18 +200,29 @@ class Specimen:
             direct_sif = direct_sif.append(k)
             direct_sif = direct_sif[['rad', contour]]
         direct_sif = direct_sif.rename(columns={contour: 'c'})
-        self.dir_sif.append(SIF(direct_sif, angle, self))
+        number = len(self.dir_sif)
+        self.dir_sif.append(SIF(direct_sif, angle, self, number))
         display(direct_sif)
+
+    def sif(self, number):
+        return self.dir_sif[number]
             
 
 
 class SIF:
-    def __init__(self, table, angle, specimen):
+    def __init__(self, table, angle, specimen, path_n=None):
         self.sif_table = table
         self.angle = angle
         self.specimen = specimen
         self.r_asymmetry = specimen.r_asymmetry
+        self.path_n = path_n
         self.fract_table = None
+        self.m = None
+        self.c = None
+        self.rvalue = None
+        self._xline = None
+        self._yline = None
+        self._length = None
 
     def add_fract(self, text, display_on=False):
         """Добавить данные фрактографии
@@ -237,5 +249,50 @@ class SIF:
             self.res_table['sif'] = self.res_table['sif'] * (1 - self.r_asymmetry)
         if display_on:
             display(self.res_table)
+
+    def solve_cge(self, drop_left=0, drop_right=0):
+        """Определение коэффициентов СРТУ"""
+        self.drop_left = drop_left
+        self.drop_right = drop_right
+        self._length = len(self.res_table)
+        x = self.res_table['sif'].iloc[drop_left: self._length - drop_right]
+        y = self.res_table['d'].iloc[drop_left: self._length - drop_right]
+        slope, intercept, rvalue, pvalue, stderr = linregress(np.log10(x), np.log10(y))
+        self.m = slope
+        self.c = 10**intercept
+        self.rvalue = rvalue
+        print('m = {:.3f}\nC = {:.6e}\nR = {:.3f}'.format(self.m, self.c, self.rvalue))
+        
+        self._xline = np.linspace(self.res_table['sif'].min(), self.res_table['sif'].max(), 100)
+        self._yline = self.c * self._xline ** self.m
+
+    def plot_cge(self, plot_coef=True, plot_drop_points=True, figure=None, position=None):
+        if not figure:
+            figure = plt.figure(figsize=(15, 10), dpi=200)
+        if not position:
+            ax = figure.add_subplot(1, 1, 1)
+        else:
+            ax = figure.add_subplot(*position)
+        if plot_coef:
+            ax.plot(self._xline, self._yline, label='Аппроксимация {}'.format(self.path_n))
+        if plot_drop_points:
+            if self.drop_right or self.drop_left:
+                drop = [x for x in range(self.drop_left)] +\
+                       [x for x in range(self._length - self.drop_right, self._length)]
+                x_drop = self.res_table['sif'].iloc[drop]
+                y_drop = self.res_table['d'].iloc[drop]
+                ax.plot(x_drop, y_drop, 'o', label='Эксперимент (сброс) {}'.format(self.path_n))
+        x = self.res_table['sif'].iloc[self.drop_left: self._length - self.drop_right]
+        y = self.res_table['d'].iloc[self.drop_left: self._length - self.drop_right]
+        ax.plot(x, y, 'o', label='Эксперимент {}'.format(self.path_n))
+
+        ax.legend(fontsize=20)
+        ax.grid(which='both', alpha=0.4)
+        ax.set_xlabel('$КИН, МПа \sqrt{мм}$', fontsize=20)
+        ax.set_ylabel('dl/dN, мм/цикл', fontsize=20)
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.tick_params(axis='both', which='major', labelsize=20)
+        return ax
 
 
