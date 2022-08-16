@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from scipy.stats import linregress
+import itertools
 
 class Specimen:
     def __init__(self, list_fronts, list_names=None, rad_obr=None, rad_def=None, force=None, r_asymmetry=None):
@@ -224,6 +225,9 @@ class SIF:
         self._yline = None
         self._length = None
 
+    # цветовые комбинации для графиков
+    COLORS = (x for x in itertools.product([0, 1], repeat=3))
+
     def add_fract(self, text, display_on=False):
         """Добавить данные фрактографии
         Три колонки:
@@ -267,32 +271,42 @@ class SIF:
         self._yline = self.c * self._xline ** self.m
 
     def plot_cge(self, plot_coef=True, plot_drop_points=True, figure=None, position=None):
-        if not figure:
+        if figure:
+            color_coef = SIF.COLORS[self.path_n]
+            color_drop = SIF.COLORS[self.path_n]
+            color = SIF.COLORS[self.path_n]
+        else:
+            color_coef = '#000000'
+            color_drop = '#888888'
+            color = '#ff0000'
             figure = plt.figure(figsize=(15, 10), dpi=200)
         if not position:
             ax = figure.add_subplot(1, 1, 1)
         else:
             ax = figure.add_subplot(*position)
+
+        x = self.res_table['sif'].iloc[self.drop_left: self._length - self.drop_right]
+        y = self.res_table['d'].iloc[self.drop_left: self._length - self.drop_right]
+        ax.plot(x, y, 'o', color=color, label='Эксперимент #{}'.format(self.path_n))
+
         if plot_coef:
-            ax.plot(self._xline, self._yline, label='Аппроксимация {}'.format(self.path_n))
+            ax.plot(self._xline, self._yline, color=color_coef, label='Аппроксимация #{}'.format(self.path_n))
+
         if plot_drop_points:
             if self.drop_right or self.drop_left:
                 drop = [x for x in range(self.drop_left)] +\
                        [x for x in range(self._length - self.drop_right, self._length)]
                 x_drop = self.res_table['sif'].iloc[drop]
                 y_drop = self.res_table['d'].iloc[drop]
-                ax.plot(x_drop, y_drop, 'o', label='Эксперимент (сброс) {}'.format(self.path_n))
-        x = self.res_table['sif'].iloc[self.drop_left: self._length - self.drop_right]
-        y = self.res_table['d'].iloc[self.drop_left: self._length - self.drop_right]
-        ax.plot(x, y, 'o', label='Эксперимент {}'.format(self.path_n))
+                ax.plot(x_drop, y_drop, 'x', color=color_drop, label='Эксперимент (сброс) #{}'.format(self.path_n))
 
         ax.legend(fontsize=20)
         ax.grid(which='both', alpha=0.4)
-        ax.set_xlabel('$КИН, МПа \sqrt{мм}$', fontsize=20)
+        ax.set_xlabel('$КИН, кгс/мм^{3/2}$', fontsize=20)
         ax.set_ylabel('dl/dN, мм/цикл', fontsize=20)
         ax.set_xscale('log')
         ax.set_yscale('log')
-        ax.tick_params(axis='both', which='major', labelsize=20)
+        ax.tick_params(axis='both', which='both', labelsize=20)
         return ax
 
 
