@@ -14,8 +14,11 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 from scipy.stats import linregress
 import itertools
 
+from padmne.pdnforcrack.forcrack import OneCycle
+
 class Specimen:
-    def __init__(self, list_fronts, list_names=None, rad_obr=None, rad_def=None, force=None, r_asymmetry=None):
+    def __init__(self, list_fronts, list_names=None, rad_obr=None, rad_def=None,
+                 force=None, r_asymmetry=None):
         """Определение фронтов КИН
         Parameters:
             list_fronts - список путей к контурам
@@ -41,6 +44,7 @@ class Specimen:
         self.r_asymmetry = r_asymmetry
         self.dir_sif = list()
         self.nominal_table = None
+        self.cge_ct = list()
 
     NAMES_COUNTUR = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
     NAME_INDEX = ['ang']
@@ -207,7 +211,15 @@ class Specimen:
 
     def sif(self, number):
         return self.dir_sif[number]
-            
+
+    def set_cge_ct(self, c, m, name=''):
+        self.cge_ct.append([c, m, name])
+
+    def get_cge_ct(self, num=None):
+        if num:
+            return self.cge_ct[num]
+        else:
+            return self.cge_ct
 
 
 class SIF:
@@ -309,4 +321,32 @@ class SIF:
         ax.tick_params(axis='both', which='both', labelsize=20)
         return ax
 
+    def plot_comparison(self):
+        crack_spec = OneCycle(self.res_table.index, self.res_table['sif'], self.c, self.m)
+        cycle_spec = crack_spec.get_number_cycle(self.res_table.index[0])
+        crack_list = list()
+        for cge in self.specimen.get_cge_ct():
+            c, m, name = cge
+            cr = OneCycle(self.res_table.index, self.res_table['sif'], c, m)
+            cycle = cr.get_number_cycle(self.res_table.index[0])
+            crack_list.append([cr, cycle, name])
+
+        plt.figure(figsize=(15,10), dpi=200)
+        
+        sdvig = self.res_table['n'].min()
+        plt.scatter(self.res_table['n'] - sdvig, self.res_table.index,
+                    label='Фрактография', color='cyan')
+
+        plt.plot(np.arange(cycle_spec), crack_spec.arr_length_crack,
+                 label='Обработанные данные')
+        for crack in crack_list:
+            cr, cycle, name = crack
+            plt.plot(np.arange(cycle), cr.arr_length_crack,
+                 label='CT '+name)
+
+        plt.legend()
+        plt.grid()
+        plt.xlabel('Число циклов')
+        plt.ylabel('Длина от очага, мм')
+        plt.show()
 
