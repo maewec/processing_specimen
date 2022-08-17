@@ -152,11 +152,10 @@ class Specimen:
             plt.plot(deg360, np.full(div, self.rad_def), 'k')
 
         # линии снятия значений КИН
-        i = 0
         for sif in self.dir_sif:
-            ang = sif.angle
+            ang = np.deg2rad(sif.angle)
             plt.plot([ang, ang], [0, self.rad_obr], '--', color='r')
-            plt.text(ang, self.rad_obr, 'Путь '+str(i))
+            plt.text(ang, self.rad_obr, 'Путь '+str(sif.path_n))
         
     @staticmethod
     def __integral_front(rads, angs, flag_radian=True):
