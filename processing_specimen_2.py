@@ -315,7 +315,7 @@ class SIF:
         ax.legend(fontsize=20)
         ax.grid(which='both', alpha=0.4)
         ax.set_xlabel('$КИН, кгс/мм^{3/2}$', fontsize=20)
-        ax.set_ylabel('dl/dN, мм/цикл', fontsize=20)
+        ax.set_ylabel('$dl/dN, мм/цикл$', fontsize=20)
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.tick_params(axis='both', which='both', labelsize=20)
@@ -331,12 +331,11 @@ class SIF:
             cycle = cr.get_number_cycle(self.res_table.index[0])
             crack_list.append([cr, cycle, name])
 
+        # первый график
         plt.figure(figsize=(15,10), dpi=200)
-        
         sdvig = self.res_table['n'].min()
         plt.scatter(self.res_table['n'] - sdvig, self.res_table.index,
                     label='Фрактография', color='cyan')
-
         plt.plot(np.arange(cycle_spec), crack_spec.arr_length_crack,
                  label='Обработанные данные')
         for crack in crack_list:
@@ -349,4 +348,27 @@ class SIF:
         plt.xlabel('Число циклов')
         plt.ylabel('Длина от очага, мм')
         plt.show()
+
+        # второй график
+        plt.figure(figsize=(15,10), dpi=200)
+        plt.scatter(self.res_table.index, self.res_table['d'],
+                    label='Фрактография', color='cyan')
+        minimum, maximum = self.res_table['d'].min(), self.res_table['d'].max()
+        plt.plot(crack_spec.arr_length_crack[:-1], np.diff(crack_spec.arr_length_crack),
+                 label='Обработанные данные')
+        for crack in crack_list:
+            cr, cycle, name = crack
+            d = np.diff(cr.arr_length_crack)
+            plt.plot(cr.arr_length_crack[:-1], d, label='CT '+name)
+            if minimum > d.min():
+                minimum = d.min()
+            if maximum < d.max():
+                maximum = d.max()
+        plt.legend()
+        plt.grid()
+        plt.xlabel('Длина от очага, мм')
+        plt.ylabel('Скорость роста, мм/цикл')
+        plt.ylim(minimum, maximum)
+        plt.show()
+
 
