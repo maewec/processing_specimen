@@ -282,7 +282,7 @@ class SIF:
         self._xline = np.linspace(self.res_table['sif'].min(), self.res_table['sif'].max(), 100)
         self._yline = self.c * self._xline ** self.m
 
-    def plot_cge(self, plot_coef=True, plot_drop_points=True, figure=None, position=None):
+    def plot_cge(self, plot_coef=True, plot_drop_points=True, plot_cge_ct=False, figure=None, position=None):
         if figure:
             color_coef = SIF.COLORS[self.path_n]
             color_drop = SIF.COLORS[self.path_n]
@@ -303,7 +303,7 @@ class SIF:
 
         if plot_coef:
             ax.plot(self._xline, self._yline, color=color_coef, label='Аппроксимация #{}'.format(self.path_n))
-
+        
         if plot_drop_points:
             if self.drop_right or self.drop_left:
                 drop = [x for x in range(self.drop_left)] +\
@@ -311,6 +311,12 @@ class SIF:
                 x_drop = self.res_table['sif'].iloc[drop]
                 y_drop = self.res_table['d'].iloc[drop]
                 ax.plot(x_drop, y_drop, 'x', color=color_drop, label='Эксперимент (сброс) #{}'.format(self.path_n))
+
+        if plot_cge_ct:
+            for cge in self.specimen.get_cge_ct():
+                c, m, name = cge
+                y = c * self._xline ** m
+                ax.plot(self._xline, y, label='CT '+name)
 
         ax.legend(fontsize=20)
         ax.grid(which='both', alpha=0.4)
