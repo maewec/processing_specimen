@@ -339,6 +339,27 @@ class SIF:
         ax.tick_params(axis='both', which='both', labelsize=20)
         return ax
 
+    def plot_cgr(self, sdvig=False, ax=None):
+        if ax:
+            color = SIF.COLORS[self.path_n]
+        else:
+            figure = plt.figure(figsize=(15, 10), dpi=200)
+            ax = figure.add_subplot(1, 1, 1)
+            color = '#ff0000'
+        if sdvig:
+            x = self.res_table.index - self.res_table.index[0]
+        else:
+            x = self.res_table.index
+        y = self.res_table['d']
+        ax.plot(x, y, 'o-', color=color, label='Эксперимент #{}'.format(self.path_n))
+
+        ax.legend(fontsize=20)
+        ax.grid(which='both', alpha=0.4)
+        ax.set_xlabel('$Длина, мм$', fontsize=20)
+        ax.set_ylabel('$dl/dN, мм/цикл$', fontsize=20)
+        ax.tick_params(axis='both', which='both', labelsize=20)
+        return ax
+
     def plot_comparison(self):
         crack_spec = OneCycle(self.res_table.index, self.res_table['sif'], self.c, self.m)
         cycle_spec = crack_spec.get_number_cycle(self.res_table.index[0])
