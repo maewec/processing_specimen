@@ -208,17 +208,33 @@ class Specimen:
         self.dir_sif.append(SIF(direct_sif, angle, self, number))
         display(direct_sif)
 
-    def sif(self, number):
-        return self.dir_sif[number]
+    def get_sif(self, number=None):
+        if type(number) == int:
+            return self.dir_sif[number]
+        else:
+            return self.dir_sif
 
     def set_cge_ct(self, c, m, name=''):
         self.cge_ct.append([c, m, name])
 
     def get_cge_ct(self, num=None):
-        if num:
+        if type(num) == int:
             return self.cge_ct[num]
         else:
             return self.cge_ct
+
+    def plot_cge(self, plot_coef=True, plot_drop_points=True, plot_cge_ct=False):
+        figure = plt.figure(figsize=(15, 10), dpi=200)
+        ax = figure.add_subplot(1, 1, 1)
+        length = len(self.get_sif())
+        for sif in self.get_sif():
+            sif.plot_cge(plot_coef=plot_coef, plot_drop_points=plot_drop_points, plot_cge_ct=False, ax=ax)
+        if plot_cge_ct:
+            for cge in self.get_cge_ct():
+                c, m, name = cge
+                y = c * sif._xline ** m
+                ax.plot(sif._xline, y, '--', label='CT '+name)
+            ax.legend()
 
 
 class SIF:
@@ -237,7 +253,7 @@ class SIF:
         self._length = None
 
     # цветовые комбинации для графиков
-    COLORS = (x for x in itertools.product([0, 1], repeat=3))
+    COLORS = [x for x in itertools.product([0, 1], repeat=3)]
 
     def add_fract(self, text, display_on=False):
         """Добавить данные фрактографии
@@ -281,20 +297,17 @@ class SIF:
         self._xline = np.linspace(self.res_table['sif'].min(), self.res_table['sif'].max(), 100)
         self._yline = self.c * self._xline ** self.m
 
-    def plot_cge(self, plot_coef=True, plot_drop_points=True, plot_cge_ct=False, figure=None, position=None):
-        if figure:
+    def plot_cge(self, plot_coef=True, plot_drop_points=True, plot_cge_ct=False, ax=None):
+        if ax:
             color_coef = SIF.COLORS[self.path_n]
             color_drop = SIF.COLORS[self.path_n]
             color = SIF.COLORS[self.path_n]
         else:
+            figure = plt.figure(figsize=(15, 10), dpi=200)
+            ax = figure.add_subplot(1, 1, 1)
             color_coef = '#000000'
             color_drop = '#888888'
             color = '#ff0000'
-            figure = plt.figure(figsize=(15, 10), dpi=200)
-        if not position:
-            ax = figure.add_subplot(1, 1, 1)
-        else:
-            ax = figure.add_subplot(*position)
 
         x = self.res_table['sif'].iloc[self.drop_left: self._length - self.drop_right]
         y = self.res_table['d'].iloc[self.drop_left: self._length - self.drop_right]
