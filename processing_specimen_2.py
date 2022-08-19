@@ -236,6 +236,14 @@ class Specimen:
                 ax.plot(sif._xline, y, '--', label='CT '+name)
             ax.legend()
 
+    def plot_cgr(self, sdvig=False):
+        figure = plt.figure(figsize=(15, 10), dpi=200)
+        ax = figure.add_subplot(1, 1, 1)
+        length = len(self.get_sif())
+        for sif in self.get_sif():
+            sif.plot_cgr(sdvig=sdvig, ax=ax)
+
+
 
 class SIF:
     def __init__(self, table, angle, specimen, path_n=None):
