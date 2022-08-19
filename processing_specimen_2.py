@@ -196,7 +196,7 @@ class Specimen:
             self.nominal_table = self.nominal_table.set_index('name')
             display(self.nominal_table)
 
-    def create_sif(self, angle, contour):
+    def create_sif(self, angle, contour, print_decart_coord=False):
         direct_sif = pd.DataFrame()
         for name in self.table:
             df = self.table[name]
@@ -207,6 +207,11 @@ class Specimen:
         number = len(self.dir_sif)
         self.dir_sif.append(SIF(direct_sif, angle, self, number))
         display(direct_sif)
+        
+        if print_decart_coord:
+            x = np.sin(np.deg2rad(angle)) * self.rad_obr
+            y = np.cos(np.deg2rad(angle)) * self.rad_obr
+            print('x = {:.5f}\ny = {:.5f}'.format(x, y))
 
     def get_sif(self, number=None):
         if type(number) == int:
