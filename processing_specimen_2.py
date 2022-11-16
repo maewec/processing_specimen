@@ -235,10 +235,19 @@ class Specimen:
         for sif in self.get_sif():
             sif.plot_cge(plot_coef=plot_coef, plot_drop_points=plot_drop_points, plot_cge_ct=False, ax=ax)
         if plot_cge_ct:
+            sif = self.get_sif(0)
+            min_ = sif._xline.min()
+            max_ = sif._xline.max()
+            for sif in self.get_sif():
+                if sif._xline.min() < min_:
+                    min_ = sif._xline.min()
+                if sif._xline.max() > max_:
+                    max_ = sif._xline.max()
             for cge in self.get_cge_ct():
                 c, m, name = cge
-                y = c * sif._xline ** m
-                ax.plot(sif._xline, y, '--', label='CT '+name)
+                xline = np.linspace(min_, max_, 100)
+                y = c * xline ** m
+                ax.plot(xline, y, '--', label='CT '+name)
             ax.legend()
 
     def plot_cgr(self, sdvig=False):
@@ -324,7 +333,7 @@ class SIF:
 
         x = self.res_table['sif'].iloc[self.drop_left: self._length - self.drop_right]
         y = self.res_table['d'].iloc[self.drop_left: self._length - self.drop_right]
-        ax.plot(x, y, 'o', color=color, label='Эксперимент #{}'.format(self.path_n))
+        ax.plot(x, y, 'o', color=color, label='Путь #{}'.format(self.path_n))
 
         if plot_coef:
             ax.plot(self._xline, self._yline, color=color_coef, label='Аппроксимация #{}'.format(self.path_n))
@@ -335,7 +344,7 @@ class SIF:
                        [x for x in range(self._length - self.drop_right, self._length)]
                 x_drop = self.res_table['sif'].iloc[drop]
                 y_drop = self.res_table['d'].iloc[drop]
-                ax.plot(x_drop, y_drop, 'x', color=color_drop, label='Эксперимент (сброс) #{}'.format(self.path_n))
+                ax.plot(x_drop, y_drop, 'x', color=color_drop, label='Путь (сброс) #{}'.format(self.path_n))
 
         if plot_cge_ct:
             for cge in self.specimen.get_cge_ct():
@@ -364,7 +373,7 @@ class SIF:
         else:
             x = self.res_table.index
         y = self.res_table['d']
-        ax.plot(x, y, 'o-', color=color, label='Эксперимент #{}'.format(self.path_n))
+        ax.plot(x, y, 'o-', color=color, label='Путь #{}'.format(self.path_n))
 
         ax.legend(fontsize=20)
         ax.grid(which='both', alpha=0.4)
