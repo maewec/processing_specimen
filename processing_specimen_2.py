@@ -18,7 +18,7 @@ from padmne.pdnforcrack.forcrack import OneCycle
 
 class Specimen:
     def __init__(self, list_fronts, list_names=None, rad_obr=None, rad_def=None,
-                 force=None, r_asymmetry=None):
+                 force=None, r_asymmetry=None, temp=None, name=''):
         """Определение фронтов КИН
         Parameters:
             list_fronts - список путей к контурам
@@ -42,6 +42,8 @@ class Specimen:
         self.rad_def = rad_def
         self.force = force
         self.r_asymmetry = r_asymmetry
+        self.temp = temp
+        self.name = name
         self.dir_sif = list()
         self.nominal_table = None
         self.cge_ct = list()
@@ -269,6 +271,7 @@ class SIF:
         self.fract_table = None
         self.m = None
         self.c = None
+        self.k_max = None
         self.rvalue = None
         self._xline = None
         self._yline = None
@@ -302,6 +305,7 @@ class SIF:
             self.res_table['sif'] = self.res_table['sif'] * (1 - self.r_asymmetry)
         if display_on:
             display(self.res_table)
+        self.k_max = self.res_table['sif'].max()
 
     def solve_cge(self, drop_left=0, drop_right=0):
         """Определение коэффициентов СРТУ"""
