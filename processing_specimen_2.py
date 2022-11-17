@@ -18,7 +18,8 @@ from padmne.pdnforcrack.forcrack import OneCycle
 
 class Specimen:
     def __init__(self, list_fronts, list_names=None, rad_obr=None, rad_def=None,
-                 force=None, r_asymmetry=None, temp=None, name=''):
+                 force=None, r_asymmetry=None, temp=None, name='',
+                 sdvig_x=0, sdvig_y=0):
         """Определение фронтов КИН
         Parameters:
             list_fronts - список путей к контурам
@@ -44,6 +45,8 @@ class Specimen:
         self.r_asymmetry = r_asymmetry
         self.temp = temp
         self.name = name
+        self.sdvig_x = sdvig_x
+        self.sdvig_y = sdvig_y
         self.dir_sif = list()
         self.nominal_table = None
         self.cge_ct = list()
@@ -91,20 +94,9 @@ class Specimen:
         res = np.zeros_like(array)
         delta_1 = int(num/2)
         delta_2 = num - delta_1
-        length = len(array)
-        for i in range(length):
-            minn = i-delta_1
-            maxx = i+delta_2
-            inc = 1
-            if maxx <= length - 1:
-                inc = 1
-                ind = np.arange(minn, maxx)
-            else:
-                maxx -= length
-                inc = -1
-                ind = np.concatenate((np.arange(minn, length), np.arange(0, maxx)))
-            summ = array[ind].sum()
-            res[i] = summ / num
+        for i in range(-delta_1, delta_2):
+            res += np.roll(array, i)
+        res = res / num
         return res
 
     def copy_smooth(self, num):
@@ -116,7 +108,7 @@ class Specimen:
                 obj_copy.table[name][contour] = self.__moving_average(arr, num=num)
         return obj_copy
 
-    def plot_geom_front(self, cont='c3'):
+    def plot_geom_front(self, cont='c3', plot_rad_obr=True, plot_rad_def=True):
         """Печать геометрии фронтов трещины с нанесенными значениями КИН"""
         
         fig = plt.figure(figsize=(15, 15))
@@ -146,19 +138,31 @@ class Specimen:
         ax.set_theta_direction(1)
         ax.set_ylim(0, rad_max+0.5)
 
-        div = 100
-        deg360 = np.linspace(0, 2*np.pi, div)
-        if self.rad_obr:
-            plt.plot(deg360, np.full(div, self.rad_obr), 'k')
-        if self.rad_def:
-            plt.plot(deg360, np.full(div, self.rad_def), 'k')
+        if self.rad_obr and plot_rad_obr:
+            rad, deg360 = self.__sdvig(self.rad_obr)
+            ax.plot(deg360, rad, 'k')
+            ax.set_ylim(0, self.rad_obr+0.5)
+        if self.rad_def and plot_rad_def:
+            rad, deg360 = self.__sdvig(self.rad_def)
+            ax.plot(deg360, rad, 'k')
 
         # линии снятия значений КИН
         for sif in self.dir_sif:
             ang = np.deg2rad(sif.angle)
             plt.plot([ang, ang], [0, self.rad_obr], '--', color='r')
             plt.text(ang, self.rad_obr, 'Путь '+str(sif.path_n))
-        
+
+    def __sdvig(self, rad):
+        div = 100
+        deg360 = np.linspace(0, 2*np.pi, div)
+        rad = np.full(div, rad)
+        x = rad * np.sin(deg360) + self.sdvig_x
+        y = rad * np.cos(deg360) + self.sdvig_y
+        rad = np.sqrt(np.square(x) + np.square(y))
+        deg360 = np.arctan(x/y)
+        deg360 = np.where(y > 0, deg360, deg360 + np.pi)
+        return rad, deg360
+
     @staticmethod
     def __integral_front(rads, angs, flag_radian=True):
         """Принимает массивы радиусов и углов, возвращает общую площадь"""
@@ -386,13 +390,14 @@ class SIF:
         ax.tick_params(axis='both', which='both', labelsize=20)
         return ax
 
-    def plot_comparison(self):
-        crack_spec = OneCycle(self.res_table.index, self.res_table['sif'], self.c, self.m)
+    def plot_comparison(self, interpol=3):
+        crack_spec = OneCycle(self.res_table.index, self.res_table['sif'], self.c, self.m,
+                              interpol=interpol)
         cycle_spec = crack_spec.get_number_cycle(self.res_table.index[0])
         crack_list = list()
         for cge in self.specimen.get_cge_ct():
             c, m, name = cge
-            cr = OneCycle(self.res_table.index, self.res_table['sif'], c, m)
+            cr = OneCycle(self.res_table.index, self.res_table['sif'], c, m, interpol=interpol)
             cycle = cr.get_number_cycle(self.res_table.index[0])
             crack_list.append([cr, cycle, name])
 
