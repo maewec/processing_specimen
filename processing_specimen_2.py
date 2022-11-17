@@ -108,7 +108,7 @@ class Specimen:
                 obj_copy.table[name][contour] = self.__moving_average(arr, num=num)
         return obj_copy
 
-    def plot_geom_front(self, cont='c3', plot_rad_obr=True, plot_rad_def=True):
+    def plot_geom_front(self, cont='c3', plot_rad_obr=True, plot_rad_def=True, dir_theta_null='S'):
         """Печать геометрии фронтов трещины с нанесенными значениями КИН"""
         
         fig = plt.figure(figsize=(15, 15))
@@ -134,7 +134,7 @@ class Specimen:
             if rad_max < rad.max():
                 rad_max = rad.max()
 
-        ax.set_theta_zero_location('S')
+        ax.set_theta_zero_location(dir_theta_null)
         ax.set_theta_direction(1)
         ax.set_ylim(0, rad_max+0.5)
 
@@ -145,6 +145,8 @@ class Specimen:
         if self.rad_def and plot_rad_def:
             rad, deg360 = self.__sdvig(self.rad_def)
             ax.plot(deg360, rad, 'k')
+
+        ax.scatter([0], [0], color='r', marker='+', linewidth=10)
 
         # линии снятия значений КИН
         for sif in self.dir_sif:
@@ -159,7 +161,8 @@ class Specimen:
         x = rad * np.sin(deg360) + self.sdvig_x
         y = rad * np.cos(deg360) + self.sdvig_y
         rad = np.sqrt(np.square(x) + np.square(y))
-        deg360 = np.arctan(x/y)
+        with np.errstate(divide='ignore'):
+            deg360 = np.where(y != 0, np.arctan(x / y), 1)
         deg360 = np.where(y > 0, deg360, deg360 + np.pi)
         return rad, deg360
 
@@ -218,6 +221,9 @@ class Specimen:
             x = np.sin(np.deg2rad(angle)) * self.rad_obr
             y = np.cos(np.deg2rad(angle)) * self.rad_obr
             print('x = {:.5f}\ny = {:.5f}'.format(x, y))
+
+    def clean_sif(self):
+        self.dir_sif = []
 
     def get_sif(self, number=None):
         if type(number) == int:
