@@ -396,14 +396,14 @@ class SIF:
         ax.tick_params(axis='both', which='both', labelsize=20)
         return ax
 
-    def plot_comparison(self, interpol=3):
-        crack_spec = OneCycle(self.res_table.index, self.res_table['sif'], self.c, self.m,
+    def plot_comparison(self, interpol=1):
+        crack_spec = OneCycle(self.res_table.index, np.array(self.res_table['sif']), self.c, self.m,
                               interpol=interpol)
         cycle_spec = crack_spec.get_number_cycle(self.res_table.index[0])
         crack_list = list()
         for cge in self.specimen.get_cge_ct():
             c, m, name = cge
-            cr = OneCycle(self.res_table.index, self.res_table['sif'], c, m, interpol=interpol)
+            cr = OneCycle(self.res_table.index, np.array(self.res_table['sif']), c, m, interpol=interpol)
             cycle = cr.get_number_cycle(self.res_table.index[0])
             crack_list.append([cr, cycle, name])
 
