@@ -64,17 +64,17 @@ class Specimen:
         return pd.read_table(path, delim_whitespace=True, names=names,
                 index_col=index_col).drop(columns=drop)
 
-    def plot_fronts(self, cont='all'):
+    def plot_fronts(self, cont='all', **kwargs):
         for name in self.table:
-            self.plot_front(name, cont)
+            self.plot_front(name, cont, **kwargs)
 
-    def plot_front(self, name, cont='all'):
+    def plot_front(self, name, cont='all', **kwargs):
         drop = ['rad', 'z']
         cur_table = self.table[name].drop(columns=drop)
         if name in self.list_names:
             if cont != 'all':
                 cur_table = cur_table[cont]
-            cur_table.plot(title=name)
+            cur_table.plot(title=name, **kwargs)
         else:
             Exception('Нет фронта '+name)
 
