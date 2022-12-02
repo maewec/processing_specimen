@@ -78,15 +78,33 @@ class Specimen:
         else:
             Exception('Нет фронта '+name)
 
-    def plot_all_fronts(self, cont='c2', return_obj=False):
+    def plot_all_fronts(self, cont, return_obj=False):
+        """
+        Parameters:
+            cont - str, dict - название контура либо словарь с названиями трещин и контурами
+            """
         if not return_obj:
             plt.figure(figsize=(15, 10))
+
+        cont_dict = self.__cont_dict(cont)
+
         for name in self.table:
+            cont = cont_dict[name]
             ax = self.table[name][cont].plot(label=name)
+
         if not return_obj:
             plt.legend()
         else:
             return ax
+
+    def __cont_dict(self, cont):
+        if not isinstance(cont, dict):
+            cont_dict = {}
+            for name in self.table:
+                cont_dict[name] = cont
+        else:
+            cont_dict = cont
+        return cont_dict
 
     @staticmethod
     def __moving_average(array, num=5):
@@ -110,6 +128,8 @@ class Specimen:
 
     def plot_geom_front(self, cont='c3', plot_rad_obr=True, plot_rad_def=True, dir_theta_null='S'):
         """Печать геометрии фронтов трещины с нанесенными значениями КИН"""
+
+        cont_dict = self.__cont_dict(cont)
         
         fig = plt.figure(figsize=(15, 15))
         ax = fig.add_subplot(projection='polar')
@@ -120,6 +140,9 @@ class Specimen:
             tab = self.table[name]
             deg = np.array(np.deg2rad(tab.index))
             rad = np.array(tab['rad'])
+
+            cont = cont_dict[name]
+
             kin = (np.array(tab[cont])[:-1] + np.array(tab[cont])[1:])/2
 
             points = np.array([deg, rad]).T.reshape(-1, 1, 2)
@@ -206,8 +229,12 @@ class Specimen:
             display(self.nominal_table)
 
     def create_sif(self, angle, contour, print_decart_coord=False):
+
+        cont_dict = self.__cont_dict(contour)
+
         direct_sif = pd.DataFrame()
         for name in self.table:
+            contour = cont_dict[name]
             df = self.table[name]
             k = df.iloc[(np.abs(df.index-angle)).argsort()[:1]]
             direct_sif = direct_sif.append(k)
