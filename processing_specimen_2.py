@@ -237,9 +237,8 @@ class Specimen:
             contour = cont_dict[name]
             df = self.table[name]
             k = df.iloc[(np.abs(df.index-angle)).argsort()[:1]]
+            k = k[['rad', contour]].rename(columns={contour: 'c'})
             direct_sif = direct_sif.append(k)
-            direct_sif = direct_sif[['rad', contour]]
-        direct_sif = direct_sif.rename(columns={contour: 'c'})
         number = len(self.dir_sif)
         self.dir_sif.append(SIF(direct_sif, angle, self, number))
         display(direct_sif)
