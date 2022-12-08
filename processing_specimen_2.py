@@ -4,6 +4,7 @@
 Обработка набора фронтов трещин
 """
 import copy
+import os
 from io import StringIO
 
 import pandas as pd
@@ -305,6 +306,7 @@ class SIF:
         self.r_asymmetry = specimen.r_asymmetry
         self.path_n = path_n
         self.fract_table = None
+        self.res_table = None
         self.m = None
         self.c = None
         self.k_max = None
@@ -472,5 +474,13 @@ class SIF:
         plt.ylabel('Скорость роста, мм/цикл')
         plt.ylim(minimum, maximum)
         plt.show()
+
+    def save_table(self, path='.', name=None):
+        if not name:
+            name_spec = self.specimen.name
+            num = self.path_n
+            name = '{}_path{}.csv'.format(name_spec, num)
+        full_path = os.path.join(path, name)
+        self.res_table.to_csv(full_path, index=True, sep=';')
 
 
