@@ -484,3 +484,44 @@ class SIF:
         self.res_table.to_csv(full_path, index=True, sep=';')
 
 
+class UniteSpecimen(Specimen):
+    def __init__(self, r_asymmetry=None):
+        self.r_asymmetry = r_asymmetry
+        self.cge_ct = list()
+        self.dir_sif = list()
+
+    def create_sif(self, filepath):
+        num = len(self.dir_sif)
+        sif = SIF_from_file(filepath, specimen=self, path_n=num)
+        self.dir_sif.append(sif)
+        return sif
+
+
+
+class SIF_from_file(SIF):
+
+    del SIF.add_fract
+    del SIF.concat
+
+    def __init__(self, filepath, specimen, path_n=None, name=None):
+        if name:
+            self.name = name
+        else:
+            self.name = os.path.splitext(os.path.basename(filepath))[0]
+
+        self.specimen = specimen
+        self.r_asymmetry = specimen.r_asymmetry
+        self.path_n = path_n
+
+        self.res_table = pd.read_csv(filepath, sep=';', index_col='rad')
+
+        self.m = None
+        self.c = None
+        self.k_max = None
+        self.rvalue = None
+        self._xline = None
+        self._yline = None
+        self._length = None
+
+
+
