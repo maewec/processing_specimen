@@ -305,6 +305,7 @@ class SIF:
         self.specimen = specimen
         self.r_asymmetry = specimen.r_asymmetry
         self.path_n = path_n
+        self.name = 'Путь #{}'.format(self.path_n)
         self.fract_table = None
         self.res_table = None
         self.m = None
@@ -375,10 +376,10 @@ class SIF:
 
         x = self.res_table['sif'].iloc[self.drop_left: self._length - self.drop_right]
         y = self.res_table['d'].iloc[self.drop_left: self._length - self.drop_right]
-        ax.plot(x, y, 'o', color=color, label='Путь #{}'.format(self.path_n))
+        ax.plot(x, y, 'o', color=color, label=self.name)
 
         if plot_coef:
-            ax.plot(self._xline, self._yline, color=color_coef, label='Аппроксимация #{}'.format(self.path_n))
+            ax.plot(self._xline, self._yline, color=color_coef, label='Аппроксимация '+self.name)
         
         if plot_drop_points:
             if self.drop_right or self.drop_left:
@@ -386,7 +387,7 @@ class SIF:
                        [x for x in range(self._length - self.drop_right, self._length)]
                 x_drop = self.res_table['sif'].iloc[drop]
                 y_drop = self.res_table['d'].iloc[drop]
-                ax.plot(x_drop, y_drop, 'x', color=color_drop, label='Путь (сброс) #{}'.format(self.path_n))
+                ax.plot(x_drop, y_drop, 'x', color=color_drop, label=self.name+' (сброс)')
 
         if plot_cge_ct:
             for cge in self.specimen.get_cge_ct():
@@ -415,7 +416,7 @@ class SIF:
         else:
             x = self.res_table.index
         y = self.res_table['d']
-        ax.plot(x, y, 'o-', color=color, label='Путь #{}'.format(self.path_n))
+        ax.plot(x, y, 'o-', color=color, label=self.name)
 
         ax.legend(fontsize=20)
         ax.grid(which='both', alpha=0.4)
@@ -499,10 +500,6 @@ class UniteSpecimen(Specimen):
 
 
 class SIF_from_file(SIF):
-
-    del SIF.add_fract
-    del SIF.concat
-
     def __init__(self, filepath, specimen, path_n=None, name=None):
         if name:
             self.name = name
