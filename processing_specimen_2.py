@@ -51,6 +51,7 @@ class Specimen:
         self.dir_sif = list()
         self.nominal_table = None
         self.cge_ct = list()
+        self.sif_cloud = None
 
     NAMES_COUNTUR = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
     NAME_INDEX = ['ang']
@@ -62,8 +63,12 @@ class Specimen:
         names = Specimen.NAMES_COLUMNS
         index_col = Specimen.NAME_INDEX
         drop = Specimen.NAME_DROP
-        return pd.read_table(path, delim_whitespace=True, names=names,
-                index_col=index_col).drop(columns=drop)
+        df = pd.read_table(path, delim_whitespace=True, names=names,
+                           index_col=index_col).drop(columns=drop)
+        # отрицательные углы конвертируются в положительные
+        df.index = np.where(df.index < 0, 360 + df.index, df.index)
+        df = df.sort_index()
+        return df
 
     def plot_fronts(self, cont='all', **kwargs):
         for name in self.table:
@@ -175,8 +180,15 @@ class Specimen:
         # линии снятия значений КИН
         for sif in self.dir_sif:
             ang = np.deg2rad(sif.angle)
-            plt.plot([ang, ang], [0, self.rad_obr], '--', color='r')
-            plt.text(ang, self.rad_obr, 'Путь '+str(sif.path_n))
+            ax.plot([ang, ang], [0, self.rad_obr], '--', color='r')
+            ax.text(ang, self.rad_obr, 'Путь '+str(sif.path_n))
+
+        # облако точек с sif_cloud
+        if self.sif_cloud:
+            df = self.sif_cloud.table
+            for index, row in df.iterrows():
+                ax.scatter(np.deg2rad(df['ang']), df['rad'],
+                           color='k', marker='x', zorder=10)
 
     def __sdvig(self, rad):
         div = 100
@@ -296,9 +308,18 @@ class Specimen:
         for sif in self.get_sif():
             sif.plot_cgr(sdvig=sdvig, ax=ax)
 
+    def set_sif_cloud(self, table, reverse_ang=False):
+        self.sif_cloud = SIF2(table, self, reverse_ang=reverse_ang)
+
+    def get_sif_cloud(self):
+        return self.sif_cloud
+
 
 
 class SIF:
+    """
+    КИН вдоль одной линии по заданному углу
+    """
     def __init__(self, table, angle, specimen, path_n=None):
         self.sif_table = table
         self.angle = angle
@@ -488,6 +509,23 @@ class SIF:
             name = '{}_path{}.csv'.format(name_spec, num)
         full_path = os.path.join(path, name)
         self.res_table.to_csv(full_path, index=True, sep=';')
+
+
+
+class SIF2:
+    """
+    КИН по облаку точек с уникальными радиусами и углами
+    """
+    def __init__(self, table, specimen, reverse_ang=False):
+        """
+        Parameters:
+        table - таблица с колонками name, rad, ang, d
+        """
+        self.table = pd.read_table(StringIO(table))
+        if reverse_ang:
+            self.table['ang'] = 360 - self.table['ang']
+        self.specimen = specimen
+
 
 
 class UniteSpecimen(Specimen):
