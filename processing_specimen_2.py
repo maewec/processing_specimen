@@ -241,7 +241,7 @@ class Specimen:
             self.nominal_table = self.nominal_table.set_index('name')
             display(self.nominal_table)
 
-    def create_sif(self, angle, contour, print_decart_coord=False):
+    def create_sif(self, angle, contour, for_dir_sif=True, print_decart_coord=False):
 
         cont_dict = self.__cont_dict(contour)
 
@@ -252,15 +252,20 @@ class Specimen:
             k = df.iloc[(np.abs(df.index-angle)).argsort()[:1]]
             k = k[['rad', contour]].rename(columns={contour: 'c'})
             direct_sif = direct_sif.append(k)
-        number = len(self.dir_sif)
-        self.dir_sif.append(SIF(direct_sif, angle, self, number))
-        display(direct_sif)
-        
+
         if print_decart_coord:
             x = np.sin(np.deg2rad(angle)) * self.rad_obr
             y = np.cos(np.deg2rad(angle)) * self.rad_obr
             print('x = {:.5f}\ny = {:.5f}'.format(x, y))
 
+
+        if for_dir_sif:
+            number = len(self.dir_sif)
+            self.dir_sif.append(SIF(direct_sif, angle, self, number))
+            display(direct_sif)
+        else:
+            return direct_sif
+        
     def clean_sif(self):
         self.dir_sif = []
 
@@ -521,10 +526,24 @@ class SIF2:
         Parameters:
         table - таблица с колонками name, rad, ang, d
         """
-        self.table = pd.read_table(StringIO(table))
+        self.table = pd.read_table(StringIO(table), sep='\s+')
         if reverse_ang:
             self.table['ang'] = 360 - self.table['ang']
         self.specimen = specimen
+        self.r_asymmetry = specimen.r_asymmetry
+
+    def create_sif(self, contour, mpa2kgs=True):
+        self.table['sif'] = None
+        for index, row in self.table.iterrows():
+            rad = row['rad']
+            ang = row['ang']
+            direct_sif = self.specimen.create_sif(ang, contour, for_dir_sif=False)
+            kin = np.interp(rad, direct_sif['rad'], direct_sif['c'])
+            self.table['sif'].iloc[index] = kin
+        if mpa2kgs:
+            self.table['sif'] = self.table['sif'] / 9.8
+        if self.r_asymmetry:
+            self.table['sif'] = self.table['sif'] * (1 - self.r_asymmetry)
 
 
 
