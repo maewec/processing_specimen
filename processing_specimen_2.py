@@ -528,9 +528,14 @@ class SIF2:
         """
         self.table = pd.read_table(StringIO(table), sep='\s+')
         if reverse_ang:
-            self.table['ang'] = 360 - self.table['ang']
+            self.table['ang'] = 360 + self.table['ang']
         self.specimen = specimen
         self.r_asymmetry = specimen.r_asymmetry
+        self.ang0 = 0
+        self.ang1 = 360
+        self.rad0 = 0
+        self.rad1 = self.table['rad'].max()
+        self.parent = None
 
     def create_sif(self, contour, mpa2kgs=True):
         self.table['sif'] = None
@@ -544,6 +549,19 @@ class SIF2:
             self.table['sif'] = self.table['sif'] / 9.8
         if self.r_asymmetry:
             self.table['sif'] = self.table['sif'] * (1 - self.r_asymmetry)
+
+    def select_group(self, ang0=0, ang1=360, rad0=0, rad1=100):
+        obj_copy = copy.deepcopy(self)
+        obj_copy.table = obj_copy.table[(obj_copy.table['rad']>rad0) &\
+                                        (obj_copy.table['rad']<rad1) &\
+                                        (obj_copy.table['ang']<ang0) &\
+                                        (obj_copy.table['ang']<ang1)]
+        obj_copy.ang0 = ang0
+        obj_copy.ang1 = ang1        
+        obj_copy.rad0 = rad0        
+        obj_copy.rad1 = rad1
+        obj_copy.parent = self
+        return obj_copy
 
 
 
