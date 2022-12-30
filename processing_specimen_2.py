@@ -9,6 +9,7 @@ from io import StringIO
 
 import pandas as pd
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
@@ -527,8 +528,11 @@ class SIF2:
         table - таблица с колонками name, rad, ang, d
         """
         self.table = pd.read_table(StringIO(table), sep='\s+')
+        self.table['ang'] = np.where(self.table['ang'] < 0,
+                                     self.table['ang'] + 360,
+                                     self.table['ang'])
         if reverse_ang:
-            self.table['ang'] = 360 + self.table['ang']
+            self.table['ang'] = 360 - self.table['ang']
         self.specimen = specimen
         self.r_asymmetry = specimen.r_asymmetry
         self.ang0 = 0
@@ -536,6 +540,11 @@ class SIF2:
         self.rad0 = 0
         self.rad1 = self.table['rad'].max()
         self.parent = None
+
+    CPOOL = ['#0000c8', '#1579ff', '#00c7dd',
+             '#28ffb9', '#39ff00', '#aaff00',
+             '#ffe300', '#ff7100', '#ff0000']
+    CMAP = mpl.colors.ListedColormap(CPOOL, 'indexed')
 
     def create_sif(self, contour, mpa2kgs=True):
         self.table['sif'] = None
@@ -564,7 +573,7 @@ class SIF2:
         return obj_copy
 
     def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
-                  plot_specimen=True, plot_parent=False,
+                  color_rate=True, plot_specimen=True, plot_parent=False,
                   dir_theta_null='S'):
         fig = plt.figure(figsize=(15, 15))
         ax = fig.add_subplot(projection='polar')
@@ -584,9 +593,19 @@ class SIF2:
 
         
         df = self.table
-        for index, row in df.iterrows():
+        if color_rate:
+            ticks = np.linspace(df['d'].min(), df['d'].max(), SIF2.CMAP.N)
+            norm = mpl.colors.BoundaryNorm(ticks, SIF2.CMAP.N)
+            sc = ax.scatter(np.deg2rad(df['ang']), df['rad'], c=df['d'],
+                            cmap=SIF2.CMAP, norm=norm)
+            cbar = fig.colorbar(sc, ax=ax, ticks=ticks, norm=norm, shrink=0.5,
+                                orientation='horizontal', pad=0.03)
+            cbar.set_ticks(ticks)
+            cbar.set_ticklabels(list(map('{:.3e}'.format, ticks)))
+            cbar.ax.tick_params(rotation=45)
+        else:
             ax.scatter(np.deg2rad(df['ang']), df['rad'],
-                       color='k', marker='x', zorder=10)
+                       color='k', marker='o', zorder=10)
 
         ax.set_xlim(np.deg2rad(ang0), np.deg2rad(ang1))
         if rad1 == 'max':
