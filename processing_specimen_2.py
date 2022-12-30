@@ -159,13 +159,13 @@ class Specimen:
             lc.set_array(kin)
             lc.set_linewidth(2)
             line = ax.add_collection(lc)
-            ax.grid(False)
             if rad_max < rad.max():
                 rad_max = rad.max()
 
         ax.set_theta_zero_location(dir_theta_null)
         ax.set_theta_direction(1)
         ax.set_ylim(0, rad_max+0.5)
+        ax.grid(False)
 
         if self.rad_obr and plot_rad_obr:
             rad, deg360 = self.__sdvig(self.rad_obr)
@@ -554,7 +554,7 @@ class SIF2:
         obj_copy = copy.deepcopy(self)
         obj_copy.table = obj_copy.table[(obj_copy.table['rad']>rad0) &\
                                         (obj_copy.table['rad']<rad1) &\
-                                        (obj_copy.table['ang']<ang0) &\
+                                        (obj_copy.table['ang']>ang0) &\
                                         (obj_copy.table['ang']<ang1)]
         obj_copy.ang0 = ang0
         obj_copy.ang1 = ang1        
@@ -562,6 +562,39 @@ class SIF2:
         obj_copy.rad1 = rad1
         obj_copy.parent = self
         return obj_copy
+
+    def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
+                  plot_specimen=True, plot_parent=False,
+                  dir_theta_null='S'):
+        fig = plt.figure(figsize=(15, 15))
+        ax = fig.add_subplot(projection='polar')
+        ax.set_theta_zero_location(dir_theta_null)
+        ax.set_theta_direction(1)
+        ax.grid(False)
+
+        spec = self.specimen
+        if plot_specimen:
+            if spec.rad_obr:
+                rad, deg360 = spec._Specimen__sdvig(spec.rad_obr)
+                ax.plot(deg360, rad, 'k')
+                rad_obr = spec.rad_obr
+            if spec.rad_def:
+                rad, deg360 = spec._Specimen__sdvig(spec.rad_def)
+                ax.plot(deg360, rad, 'k')
+
+        
+        df = self.table
+        for index, row in df.iterrows():
+            ax.scatter(np.deg2rad(df['ang']), df['rad'],
+                       color='k', marker='x', zorder=10)
+
+        ax.set_xlim(np.deg2rad(ang0), np.deg2rad(ang1))
+        if rad1 == 'max':
+            rad1 = df['rad'].max()
+            if plot_specimen:
+                if rad_obr > rad1:
+                    rad1 = rad_obr
+        ax.set_ylim(rad0, rad1*1.1)
 
 
 
