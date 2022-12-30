@@ -572,6 +572,15 @@ class SIF2:
         obj_copy.parent = self
         return obj_copy
 
+    def select_by_rate(self, drop_rate_min=0, drop_rate_max='max'):
+        obj_copy = copy.deepcopy(self)
+        if drop_rate_max == 'max':
+            drop_rate_max = obj_copy.table['d'].max()
+        obj_copy.table = obj_copy.table[(obj_copy.table['d']>=drop_rate_min) &\
+                                        (obj_copy.table['d']<=drop_rate_max)]
+        obj_copy.parent = self
+        return obj_copy
+
     def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
                   color_rate=True, plot_specimen=True, plot_parent=False,
                   dir_theta_null='S'):
