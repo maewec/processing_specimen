@@ -627,9 +627,9 @@ class SIF2:
 
     def plot_cge(self, plot_coef=True, plot_cge_ct=True, ax=None):
         if ax:
+            name, id_ = self.group.find(self)
             color_coef = COLORS[id_]
             color = COLORS[id_]
-            name, id_ = self.group.fing(self)
             label = '{} {}'.format(id_, name)
             label2 = 'Аппроксимация ' + label
         else:
@@ -744,6 +744,25 @@ class GroupSIF:
         elif id_:
             i = self.group_id.index(id_)
             return self.group_obj[i], self.group_name[i]
+
+    def solve_cge(self):
+        for sif, name, id_ in self:
+            print('{} {}'.format(id_, name))
+            sif.solve_cge()
+
+    def plot_cge(self, plot_coef=True, plot_cge_ct=True):
+        figure = plt.figure(figsize=(15, 10), dpi=200)
+        ax = figure.add_subplot(1, 1, 1)
+        for sif, name, id_ in self:
+            sif.plot_cge(plot_coef=plot_coef, plot_cge_ct=False, ax=ax)
+
+        xline = np.linspace(*ax.set_xlim(), 100)
+
+        if plot_cge_ct:
+            for cge in sif.specimen.get_cge_ct():
+                c, m, name = cge
+                y = c * xline ** m
+                ax.plot(xline, y, label='CT '+name)
 
 
     def __iter__(self):
