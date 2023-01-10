@@ -626,6 +626,32 @@ class SIF2:
 
 
 
+class GroupSIF:
+    def __init__(self):
+        self.group_obj = []
+        self.group_name = []
+        self.group_id = []
+
+    def add(self, obj, name=''):
+        self.group_obj.append(obj)
+        self.group_name.append(name)
+        self.group_id.append(len(self.group_obj))
+
+    def delete(self, obj=None, name=None, id_=None):
+        if obj:
+            i = self.group_obj.index(obj)
+        elif name:
+            i = self.group_name.index(name)
+        elif id_:
+            i = self.group_id.index(id_)
+        del self.group_obj[i]
+        del self.group_name[i]
+        del self.group_id[i]
+
+
+
+
+
 class UniteSpecimen(Specimen):
     def __init__(self, r_asymmetry=None):
         self.r_asymmetry = r_asymmetry
