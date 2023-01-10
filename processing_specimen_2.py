@@ -556,11 +556,19 @@ class SIF2:
             self.group.add(self)
         else:
             self.group = None
+        self.m = None
+        self.c = None
+        self.rvalue = None
+        self._xline = None
+        self._yline = None
 
     CPOOL = ['#0000c8', '#1579ff', '#00c7dd',
              '#28ffb9', '#39ff00', '#aaff00',
              '#ffe300', '#ff7100', '#ff0000']
     CMAP = mpl.colors.ListedColormap(CPOOL, 'indexed')
+
+    def sort(self, column='sif'):
+        self.table = self.table.sort_values(by=[column])
 
     def create_sif(self, contour, mpa2kgs=True):
         self.table['sif'] = None
@@ -574,6 +582,8 @@ class SIF2:
             self.table['sif'] = self.table['sif'] / 9.8
         if self.r_asymmetry:
             self.table['sif'] = self.table['sif'] * (1 - self.r_asymmetry)
+
+        self.sort()
 
     def select_group(self, ang0=0, ang1=360, rad0=0, rad1=100, group_obj=None):
         obj_copy = copy.deepcopy(self)
@@ -600,6 +610,20 @@ class SIF2:
         obj_copy.group = group_obj
         obj_copy.group.add(obj_copy)
         return obj_copy
+
+    def solve_cge(self):
+        """Определение коэффициентов СРТУ"""
+        df = self.table
+        x = df['sif'].to_numpy(dtype=float)
+        y = df['d'].to_numpy(dtype=float)
+        slope, intercept, rvalue, pvalue, stderr = linregress(np.log10(x), np.log10(y))
+        self.m = slope
+        self.c = 10**intercept
+        self.rvalue = rvalue
+        print('m = {:.3f}\nC = {:.6e}\nR = {:.3f}'.format(self.m, self.c, self.rvalue))
+        
+        self._xline = np.linspace(df['sif'].min(), df['sif'].max(), 100)
+        self._yline = self.c * self._xline ** self.m
 
     def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
                   color_rate=True, plot_specimen=True,
