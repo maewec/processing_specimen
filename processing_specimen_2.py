@@ -522,7 +522,7 @@ class SIF2:
     """
     КИН по облаку точек с уникальными радиусами и углами
     """
-    def __init__(self, table, specimen, reverse_ang=False):
+    def __init__(self, table, specimen, reverse_ang=False, group_obj=None):
         """
         Parameters:
         table - таблица с колонками name, rad, ang, d
@@ -540,6 +540,11 @@ class SIF2:
         self.rad0 = 0
         self.rad1 = self.table['rad'].max()
         self.parent = None
+        if group_obj:
+            self.group = group_obj
+            self.group.add(self)
+        else:
+            self.group = None
 
     CPOOL = ['#0000c8', '#1579ff', '#00c7dd',
              '#28ffb9', '#39ff00', '#aaff00',
@@ -559,7 +564,7 @@ class SIF2:
         if self.r_asymmetry:
             self.table['sif'] = self.table['sif'] * (1 - self.r_asymmetry)
 
-    def select_group(self, ang0=0, ang1=360, rad0=0, rad1=100):
+    def select_group(self, ang0=0, ang1=360, rad0=0, rad1=100, group_obj=None):
         obj_copy = copy.deepcopy(self)
         obj_copy.table = obj_copy.table[(obj_copy.table['rad']>rad0) &\
                                         (obj_copy.table['rad']<rad1) &\
@@ -570,15 +575,19 @@ class SIF2:
         obj_copy.rad0 = rad0        
         obj_copy.rad1 = rad1
         obj_copy.parent = self
+        obj_copy.group = group_obj
+        obj_copy.group.add(obj_copy)
         return obj_copy
 
-    def select_by_rate(self, drop_rate_min=0, drop_rate_max='max'):
+    def select_by_rate(self, drop_rate_min=0, drop_rate_max='max', group_obj=None):
         obj_copy = copy.deepcopy(self)
         if drop_rate_max == 'max':
             drop_rate_max = obj_copy.table['d'].max()
         obj_copy.table = obj_copy.table[(obj_copy.table['d']>=drop_rate_min) &\
                                         (obj_copy.table['d']<=drop_rate_max)]
         obj_copy.parent = self
+        obj_copy.group = group_obj
+        obj_copy.group.add(obj_copy)
         return obj_copy
 
     def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
