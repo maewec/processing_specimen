@@ -18,6 +18,17 @@ import itertools
 
 from padmne.pdnforcrack.forcrack import OneCycle
 
+
+# цветовые комбинации для графиков
+COLORS = [(0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1), (1, 0, 0),
+          (1, 0, 1), (1, 1, 0), (0, 0, 0.5), (0, 0.5, 0), (0, 0.5, 0.5),
+          (0, 0.5, 1), (0, 1, 0.5), (0.5, 0, 0), (0.5, 0, 0.5), (0.5, 0, 1),
+          (0.5, 0.5, 0), (0.5, 0.5, 0.5), (0.5, 0.5, 1), (0.5, 1, 0), (0.5, 1, 0.5),
+          (0.5, 1, 1), (1, 0, 0.5), (1, 0.5, 0), (1, 0.5, 0.5), (1, 0.5, 1),
+          (1, 1, 0.5)]
+
+
+
 class Specimen:
     def __init__(self, list_fronts, list_names=None, rad_obr=None, rad_def=None,
                  force=None, r_asymmetry=None, temp=None, name='',
@@ -591,7 +602,7 @@ class SIF2:
         return obj_copy
 
     def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
-                  color_rate=True, plot_specimen=True, plot_parent=False,
+                  color_rate=True, plot_specimen=True,
                   dir_theta_null='S'):
         fig = plt.figure(figsize=(15, 15))
         ax = fig.add_subplot(projection='polar')
@@ -640,11 +651,13 @@ class GroupSIF:
         self.group_obj = []
         self.group_name = []
         self.group_id = []
+        self.__i = 0
 
     def add(self, obj, name=''):
         self.group_obj.append(obj)
         self.group_name.append(name)
         self.group_id.append(len(self.group_obj))
+        self.__i = 0
 
     def delete(self, obj=None, name=None, id_=None):
         if obj:
@@ -657,7 +670,54 @@ class GroupSIF:
         del self.group_name[i]
         del self.group_id[i]
 
+    def __iter__(self):
+        return self
 
+    def __next__(self):
+        try:
+            pack = (self.group_obj[self.__i],
+                    self.group_name[self.__i],
+                    self.group_id[self.__i])
+            self.__i += 1
+            return pack
+        except IndexError:
+            self.__i = 0
+            raise StopIteration
+
+    def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
+                  plot_specimen=True, plot_parent=False,
+                  dir_theta_null='S'):
+        fig = plt.figure(figsize=(15,15))
+        ax = fig.add_subplot(projection='polar')
+        ax.set_theta_zero_location(dir_theta_null)
+        ax.set_theta_direction(1)
+        ax.grid(False)
+
+        for sif, name, id_ in self:
+            df = sif.table
+            sc = ax.scatter(np.deg2rad(df['ang']), df['rad'],
+                            color=COLORS[id_], marker='o', zorder=10,
+                            label='{} {}'.format(id_, name))
+
+        spec = sif.specimen
+        if plot_specimen:
+            if spec.rad_obr:
+                rad, deg360 = spec._Specimen__sdvig(spec.rad_obr)
+                ax.plot(deg360, rad, 'k')
+                rad_obr = spec.rad_obr
+            if spec.rad_def:
+                rad, deg360 = spec._Specimen__sdvig(spec.rad_def)
+                ax.plot(deg360, rad, 'k')
+
+        ax.set_xlim(np.deg2rad(ang0), np.deg2rad(ang1))
+        if rad1 == 'max':
+            rad1 = df['rad'].max()
+            if plot_specimen:
+                if rad_obr > rad1:
+                    rad1 = rad_obr
+        ax.set_ylim(rad0, rad1*1.1)
+
+        ax.legend()
 
 
 
