@@ -625,6 +625,46 @@ class SIF2:
         self._xline = np.linspace(df['sif'].min(), df['sif'].max(), 100)
         self._yline = self.c * self._xline ** self.m
 
+    def plot_cge(self, plot_coef=True, plot_cge_ct=True, ax=None):
+        if ax:
+            color_coef = COLORS[id_]
+            color = COLORS[id_]
+            name, id_ = self.group.fing(self)
+            label = '{} {}'.format(id_, name)
+            label2 = 'Аппроксимация ' + label
+        else:
+            figure = plt.figure(figsize=(15, 10), dpi=200)
+            ax = figure.add_subplot(1, 1, 1)
+            color_coef = '#000000'
+            color = '#ff0000'
+            label = 'Эксперимент'
+            label2 = 'Аппроксимация'
+
+        df = self.table
+        x = df['sif'].to_numpy(dtype=float)
+        y = df['d'].to_numpy(dtype=float)
+        ax.plot(x, y, 'o', color=color, label=label)
+
+        if plot_coef:
+            ax.plot(self._xline, self._yline, color=color_coef,
+                    label=label2)
+
+        if plot_cge_ct:
+            for cge in self.specimen.get_cge_ct():
+                c, m, name = cge
+                y = c * self._xline ** m
+                ax.plot(self._xline, y, label='CT '+name)
+
+        ax.legend(fontsize=20)
+        ax.grid(which='both', alpha=0.4)
+        ax.set_xlabel('$КИН, кгс/мм^{3/2}$', fontsize=20)
+        ax.set_ylabel('$dl/dN, мм/цикл$', fontsize=20)
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.tick_params(axis='both', which='both', labelsize=20)
+        return ax
+
+
     def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
                   color_rate=True, plot_specimen=True,
                   dir_theta_null='S'):
@@ -693,6 +733,18 @@ class GroupSIF:
         del self.group_obj[i]
         del self.group_name[i]
         del self.group_id[i]
+    
+    def find(self, obj=None, name=None, id_=None):
+        if obj:
+            i = self.group_obj.index(obj)
+            return self.group_name[i], self.group_id[i]
+        elif name:
+            i = self.group_name.index(name)
+            return self.group_obj[i], self.group_id[i]
+        elif id_:
+            i = self.group_id.index(id_)
+            return self.group_obj[i], self.group_name[i]
+
 
     def __iter__(self):
         return self
