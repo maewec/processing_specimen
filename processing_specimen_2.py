@@ -596,8 +596,11 @@ class SIF2:
         obj_copy.rad0 = rad0        
         obj_copy.rad1 = rad1
         obj_copy.parent = self
-        obj_copy.group = group_obj
-        obj_copy.group.add(obj_copy)
+        if group_obj:
+            obj_copy.group = group_obj
+            obj_copy.group.add(obj_copy)
+        else:
+            obj_copy.group = None
         return obj_copy
 
     def select_by_rate(self, drop_rate_min=0, drop_rate_max='max', group_obj=None):
@@ -607,8 +610,11 @@ class SIF2:
         obj_copy.table = obj_copy.table[(obj_copy.table['d']>=drop_rate_min) &\
                                         (obj_copy.table['d']<=drop_rate_max)]
         obj_copy.parent = self
-        obj_copy.group = group_obj
-        obj_copy.group.add(obj_copy)
+        if group_obj:
+            obj_copy.group = group_obj
+            obj_copy.group.add(obj_copy)
+        else:
+            obj_copy.group = None
         return obj_copy
 
     def solve_cge(self):
@@ -708,6 +714,25 @@ class SIF2:
                     rad1 = rad_obr
         ax.set_ylim(rad0, rad1*1.1)
 
+    def concatenate(self, objs_list, group_obj=None):
+        obj_copy = copy.deepcopy(self)
+        if isinstance(objs_list, list):
+            lst = [obj_copy.table]
+            for sif in objs_list:
+                lst.append(sif.table)
+        elif isinstance(objs_list, SIF2):
+            lst = [obj_copy.table, objs_list.table]
+        obj_copy.table = pd.concat(lst)
+
+        obj_copy.sort()
+        obj_copy.parent = self
+        if group_obj:
+            obj_copy.group = group_obj
+            obj_copy.group.add(obj_copy)
+        else:
+            obj_copy.group = None
+        return obj_copy
+
 
 
 class GroupSIF:
@@ -715,11 +740,13 @@ class GroupSIF:
         self.group_obj = []
         self.group_name = []
         self.group_id = []
+        self.marker = 'o'
         self.__i = 0
 
-    def add(self, obj, name=''):
+    def add(self, obj, name='', marker='o'):
         self.group_obj.append(obj)
         self.group_name.append(name)
+        self.marker = marker
         self.group_id.append(len(self.group_obj))
         self.__i = 0
 
