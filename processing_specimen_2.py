@@ -633,7 +633,8 @@ class SIF2:
         self._xline = np.linspace(df['sif'].min(), df['sif'].max(), 100)
         self._yline = self.c * self._xline ** self.m
 
-    def plot_cge(self, plot_coef=True, plot_cge_ct=True, ax=None, marker='o'):
+    def plot_cge(self, plot_coef=True, plot_cge_ct=True, ax=None, marker='o',
+                 comment_num_points=False):
         if ax:
             name, id_ = self.group.find(self)
             color_coef = COLORS[id_]
@@ -652,6 +653,10 @@ class SIF2:
         x = df['sif'].to_numpy(dtype=float)
         y = df['d'].to_numpy(dtype=float)
         ax.plot(x, y, marker=marker, linestyle='', color=color, label=label)
+
+        if comment_num_points:
+            for index, row in df.iterrows():
+                ax.text(row['sif'], row['d'], str(index))
 
         if plot_coef:
             ax.plot(self._xline, self._yline, color=color_coef,
@@ -675,7 +680,7 @@ class SIF2:
 
     def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
                   color_rate=True, plot_specimen=True,
-                  dir_theta_null='S'):
+                  dir_theta_null='S', comment_num_points=False):
         fig = plt.figure(figsize=(15, 15))
         ax = fig.add_subplot(projection='polar')
         ax.set_theta_zero_location(dir_theta_null)
@@ -707,6 +712,10 @@ class SIF2:
         else:
             ax.scatter(np.deg2rad(df['ang']), df['rad'],
                        color='k', marker='o', zorder=10)
+
+        if comment_num_points:
+            for index, row in df.iterrows():
+                ax.text(np.deg2rad(row['ang']), row['rad'], str(index), zorder=20)
 
         ax.set_xlim(np.deg2rad(ang0), np.deg2rad(ang1))
         if rad1 == 'max':
@@ -779,12 +788,12 @@ class GroupSIF:
             print('{} {}'.format(pack['id'], pack['name']))
             pack['sif'].solve_cge()
 
-    def plot_cge(self, plot_coef=True, plot_cge_ct=True):
+    def plot_cge(self, plot_coef=True, plot_cge_ct=True, comment_num_points=False):
         figure = plt.figure(figsize=(15, 10), dpi=200)
         ax = figure.add_subplot(1, 1, 1)
         for pack in self:
             pack['sif'].plot_cge(plot_coef=plot_coef, plot_cge_ct=False, ax=ax,
-                                 marker=pack['marker'])
+                                 marker=pack['marker'], comment_num_points=comment_num_points)
 
         xline = np.linspace(*ax.set_xlim(), 100)
 
@@ -812,7 +821,7 @@ class GroupSIF:
 
     def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
                   plot_specimen=True, plot_parent=False,
-                  dir_theta_null='S'):
+                  dir_theta_null='S', comment_num_points=False):
         fig = plt.figure(figsize=(15,15))
         ax = fig.add_subplot(projection='polar')
         ax.set_theta_zero_location(dir_theta_null)
@@ -824,6 +833,10 @@ class GroupSIF:
             sc = ax.scatter(np.deg2rad(df['ang']), df['rad'],
                             color=COLORS[pack['id']], marker=pack['marker'], zorder=10,
                             label='{} {}'.format(pack['id'], pack['name']))
+
+            if comment_num_points:
+                for index, row in df.iterrows():
+                    ax.text(np.deg2rad(row['ang']), row['rad'], str(index), zorder=20)
 
         spec = pack['sif'].specimen
         if plot_specimen:
