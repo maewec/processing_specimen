@@ -585,7 +585,8 @@ class SIF2:
 
         self.sort()
 
-    def select_group(self, ang0=0, ang1=360, rad0=0, rad1=100, group_obj=None):
+    def select_group(self, ang0=0, ang1=360, rad0=0, rad1=100, group_obj=None,
+                     marker='o'):
         obj_copy = copy.deepcopy(self)
         obj_copy.table = obj_copy.table[(obj_copy.table['rad']>rad0) &\
                                         (obj_copy.table['rad']<rad1) &\
@@ -598,12 +599,13 @@ class SIF2:
         obj_copy.parent = self
         if group_obj:
             obj_copy.group = group_obj
-            obj_copy.group.add(obj_copy)
+            obj_copy.group.add(obj_copy, marker=marker)
         else:
             obj_copy.group = None
         return obj_copy
 
-    def select_by_rate(self, drop_rate_min=0, drop_rate_max='max', group_obj=None):
+    def select_by_rate(self, drop_rate_min=0, drop_rate_max='max', group_obj=None,
+                       marker='o'):
         obj_copy = copy.deepcopy(self)
         if drop_rate_max == 'max':
             drop_rate_max = obj_copy.table['d'].max()
@@ -612,7 +614,7 @@ class SIF2:
         obj_copy.parent = self
         if group_obj:
             obj_copy.group = group_obj
-            obj_copy.group.add(obj_copy)
+            obj_copy.group.add(obj_copy, marker=marker)
         else:
             obj_copy.group = None
         return obj_copy
@@ -631,7 +633,7 @@ class SIF2:
         self._xline = np.linspace(df['sif'].min(), df['sif'].max(), 100)
         self._yline = self.c * self._xline ** self.m
 
-    def plot_cge(self, plot_coef=True, plot_cge_ct=True, ax=None):
+    def plot_cge(self, plot_coef=True, plot_cge_ct=True, ax=None, marker='o'):
         if ax:
             name, id_ = self.group.find(self)
             color_coef = COLORS[id_]
@@ -649,7 +651,7 @@ class SIF2:
         df = self.table
         x = df['sif'].to_numpy(dtype=float)
         y = df['d'].to_numpy(dtype=float)
-        ax.plot(x, y, 'o', color=color, label=label)
+        ax.plot(x, y, marker=marker, linestyle='', color=color, label=label)
 
         if plot_coef:
             ax.plot(self._xline, self._yline, color=color_coef,
@@ -714,7 +716,7 @@ class SIF2:
                     rad1 = rad_obr
         ax.set_ylim(rad0, rad1*1.1)
 
-    def concatenate(self, objs_list, group_obj=None):
+    def concatenate(self, objs_list, group_obj=None, marker='o'):
         obj_copy = copy.deepcopy(self)
         if isinstance(objs_list, list):
             lst = [obj_copy.table]
@@ -728,7 +730,7 @@ class SIF2:
         obj_copy.parent = self
         if group_obj:
             obj_copy.group = group_obj
-            obj_copy.group.add(obj_copy)
+            obj_copy.group.add(obj_copy, marker=marker)
         else:
             obj_copy.group = None
         return obj_copy
@@ -740,13 +742,13 @@ class GroupSIF:
         self.group_obj = []
         self.group_name = []
         self.group_id = []
-        self.marker = 'o'
+        self.marker = []
         self.__i = 0
 
     def add(self, obj, name='', marker='o'):
         self.group_obj.append(obj)
         self.group_name.append(name)
-        self.marker = marker
+        self.marker.append(marker)
         self.group_id.append(len(self.group_obj))
         self.__i = 0
 
@@ -773,20 +775,21 @@ class GroupSIF:
             return self.group_obj[i], self.group_name[i]
 
     def solve_cge(self):
-        for sif, name, id_ in self:
-            print('{} {}'.format(id_, name))
-            sif.solve_cge()
+        for pack in self:
+            print('{} {}'.format(pack['id'], pack['name']))
+            pack['sif'].solve_cge()
 
     def plot_cge(self, plot_coef=True, plot_cge_ct=True):
         figure = plt.figure(figsize=(15, 10), dpi=200)
         ax = figure.add_subplot(1, 1, 1)
-        for sif, name, id_ in self:
-            sif.plot_cge(plot_coef=plot_coef, plot_cge_ct=False, ax=ax)
+        for pack in self:
+            pack['sif'].plot_cge(plot_coef=plot_coef, plot_cge_ct=False, ax=ax,
+                                 marker=pack['marker'])
 
         xline = np.linspace(*ax.set_xlim(), 100)
 
         if plot_cge_ct:
-            for cge in sif.specimen.get_cge_ct():
+            for cge in pack['sif'].specimen.get_cge_ct():
                 c, m, name = cge
                 y = c * xline ** m
                 ax.plot(xline, y, label='CT '+name)
@@ -797,9 +800,10 @@ class GroupSIF:
 
     def __next__(self):
         try:
-            pack = (self.group_obj[self.__i],
-                    self.group_name[self.__i],
-                    self.group_id[self.__i])
+            pack = {'sif': self.group_obj[self.__i],
+                    'name': self.group_name[self.__i],
+                    'id': self.group_id[self.__i],
+                    'marker': self.marker[self.__i]}
             self.__i += 1
             return pack
         except IndexError:
@@ -815,13 +819,13 @@ class GroupSIF:
         ax.set_theta_direction(1)
         ax.grid(False)
 
-        for sif, name, id_ in self:
-            df = sif.table
+        for pack in self:
+            df = pack['sif'].table
             sc = ax.scatter(np.deg2rad(df['ang']), df['rad'],
-                            color=COLORS[id_], marker='o', zorder=10,
-                            label='{} {}'.format(id_, name))
+                            color=COLORS[pack['id']], marker=pack['marker'], zorder=10,
+                            label='{} {}'.format(pack['id'], pack['name']))
 
-        spec = sif.specimen
+        spec = pack['sif'].specimen
         if plot_specimen:
             if spec.rad_obr:
                 rad, deg360 = spec._Specimen__sdvig(spec.rad_obr)
