@@ -533,7 +533,7 @@ class SIF2:
     """
     КИН по облаку точек с уникальными радиусами и углами
     """
-    def __init__(self, table, specimen, reverse_ang=False, group_obj=None):
+    def __init__(self, table, specimen, reverse_ang=False):
         """
         Parameters:
         table - таблица с колонками name, rad, ang, d
@@ -551,11 +551,6 @@ class SIF2:
         self.rad0 = 0
         self.rad1 = self.table['rad'].max()
         self.parent = None
-        if group_obj:
-            self.group = group_obj
-            self.group.add(self)
-        else:
-            self.group = None
         self.m = None
         self.c = None
         self.rvalue = None
@@ -585,7 +580,7 @@ class SIF2:
 
         self.sort()
 
-    def select_group(self, ang0=0, ang1=360, rad0=0, rad1=100, group_obj=None,
+    def select_group(self, ang0=0, ang1=360, rad0=0, rad1=100,
                      marker='o'):
         obj_copy = copy.deepcopy(self)
         obj_copy.table = obj_copy.table[(obj_copy.table['rad']>rad0) &\
@@ -597,14 +592,9 @@ class SIF2:
         obj_copy.rad0 = rad0        
         obj_copy.rad1 = rad1
         obj_copy.parent = self
-        if group_obj:
-            obj_copy.group = group_obj
-            obj_copy.group.add(obj_copy, marker=marker)
-        else:
-            obj_copy.group = None
         return obj_copy
 
-    def select_by_rate(self, drop_rate_min=0, drop_rate_max='max', group_obj=None,
+    def select_by_rate(self, drop_rate_min=0, drop_rate_max='max',
                        marker='o'):
         obj_copy = copy.deepcopy(self)
         if drop_rate_max == 'max':
@@ -612,11 +602,6 @@ class SIF2:
         obj_copy.table = obj_copy.table[(obj_copy.table['d']>=drop_rate_min) &\
                                         (obj_copy.table['d']<=drop_rate_max)]
         obj_copy.parent = self
-        if group_obj:
-            obj_copy.group = group_obj
-            obj_copy.group.add(obj_copy, marker=marker)
-        else:
-            obj_copy.group = None
         return obj_copy
 
     def solve_cge(self):
@@ -634,13 +619,19 @@ class SIF2:
         self._yline = self.c * self._xline ** self.m
 
     def plot_cge(self, plot_coef=True, plot_cge_ct=True, ax=None, marker='o',
-                 comment_num_points=False):
+                 comment_num_points=False, group=None):
         if ax:
-            name, id_ = self.group.find(self)
-            color_coef = COLORS[id_]
-            color = COLORS[id_]
-            label = '{} {}'.format(id_, name)
-            label2 = 'Аппроксимация ' + label
+            if isinstance(group, GroupSIF):
+                name, id_ = group.find(self)
+                label = '{} {}'.format(id_, name)
+                label2 = 'Аппроксимация ' + label
+                color_coef = COLORS[id_]
+                color = COLORS[id_]
+            else:
+                color_coef = '#000000'
+                color = '#ff0000'
+                label = 'Эксперимент'
+                label2 = 'Аппроксимация'
         else:
             figure = plt.figure(figsize=(15, 10), dpi=200)
             ax = figure.add_subplot(1, 1, 1)
@@ -737,11 +728,6 @@ class SIF2:
 
         obj_copy.sort()
         obj_copy.parent = self
-        if group_obj:
-            obj_copy.group = group_obj
-            obj_copy.group.add(obj_copy, marker=marker)
-        else:
-            obj_copy.group = None
         return obj_copy
 
 
@@ -793,7 +779,8 @@ class GroupSIF:
         ax = figure.add_subplot(1, 1, 1)
         for pack in self:
             pack['sif'].plot_cge(plot_coef=plot_coef, plot_cge_ct=False, ax=ax,
-                                 marker=pack['marker'], comment_num_points=comment_num_points)
+                                 marker=pack['marker'], comment_num_points=comment_num_points,
+                                 group=self)
 
         xline = np.linspace(*ax.set_xlim(), 100)
 
