@@ -730,6 +730,9 @@ class SIF2:
         obj_copy.parent = self
         return obj_copy
 
+    def copy(self):
+        return copy.deepcopy(self)
+
 
 
 class GroupSIF:
@@ -790,6 +793,8 @@ class GroupSIF:
                 y = c * xline ** m
                 ax.plot(xline, y, label='CT '+name)
 
+    def copy(self):
+        return copy.copy(self)
 
     def __iter__(self):
         return self
