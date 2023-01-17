@@ -565,6 +565,9 @@ class SIF2:
         self.rvalue = None
         self._xline = None
         self._yline = None
+
+        self.curve_min = None
+        self.curve_max = None
         self.define_minmax_curve()
 
     CPOOL = ['#0000c8', '#1579ff', '#00c7dd',
@@ -573,13 +576,14 @@ class SIF2:
     CMAP = mpl.colors.ListedColormap(CPOOL, 'indexed')
 
     def define_minmax_curve(self):
-        self.sort('rad')
-        index = self.table['rad'].idxmin()
-        self.curve_min = self.curve_front_data.search_curve(self.table['rad'].loc[index],
-                                           self.table['ang'].loc[index])
-        index = self.table['rad'].idxmax()
-        self.curve_max = self.curve_front_data.search_curve(self.table['rad'].loc[index],
-                                           self.table['ang'].loc[index])
+        if self.curve_front_data:
+            self.sort('rad')
+            index = self.table['rad'].idxmin()
+            self.curve_min = self.curve_front_data.search_curve(self.table['rad'].loc[index],
+                                               self.table['ang'].loc[index])
+            index = self.table['rad'].idxmax()
+            self.curve_max = self.curve_front_data.search_curve(self.table['rad'].loc[index],
+                                               self.table['ang'].loc[index])
     def get_curve(self, index):
         return self.curve_front_data.search_curve(self.table['rad'].loc[index],
                                                   self.table['ang'].loc[index])
@@ -594,7 +598,7 @@ class SIF2:
             ang = row['ang']
             direct_sif = self.specimen.create_sif(ang, contour, for_dir_sif=False)
             kin = np.interp(rad, direct_sif['rad'], direct_sif['c'])
-            self.table['sif'].iloc[index] = kin
+            self.table.loc[index, 'sif'] = kin
         if mpa2kgs:
             self.table['sif'] = self.table['sif'] / 9.8
         if self.r_asymmetry:
@@ -744,8 +748,10 @@ class SIF2:
 
         # печать кривых фронта для крайних точек
         if plot_curve_front_data:
-            self.curve_min.plot_ax(ax)
-            self.curve_max.plot_ax(ax)
+            if self.curve_min:
+                self.curve_min.plot_ax(ax)
+            if self.curve_max:
+                self.curve_max.plot_ax(ax)
 
     def concatenate(self, objs_list, group_obj=None, marker='o'):
         obj_copy = copy.deepcopy(self)
@@ -804,6 +810,10 @@ class GroupSIF:
             i = self.group_id.index(id_)
             return self.group_obj[i], self.group_name[i]
 
+    def set_table(self, id_, table):
+        obj, name = self.find(id_=id_)
+        obj.table = table
+
     def solve_cge(self):
         for pack in self:
             print('{} {}'.format(pack['id'], pack['name']))
@@ -825,8 +835,102 @@ class GroupSIF:
                 y = c * xline ** m
                 ax.plot(xline, y, label='CT '+name)
 
+    def cut_to_equivalent(self):
+        """Обрезка лишних точек для создания эквивалентных расстояний"""
+        a0_min = 0
+        a0_max = 1000000
+        for pack in self:
+            a0 = pack['sif'].curve_min.rads[0]
+            if a0 > a0_min:
+                a0_min = a0
+                min_sif_id = pack['id']
+                min_sif = pack['sif']
+            a0 = pack['sif'].curve_max.rads[0]
+            if a0 < a0_max:
+                a0_max = a0
+                max_sif_id = pack['id']
+                max_sif = pack['sif']
+
+        for pack in self:
+            sif = pack['sif']
+            table = sif.table
+            if pack['id'] != min_sif_id:
+                min_index = table['rad'].idxmin()
+                ang1 = table.loc[min_index, 'ang']
+                rad1 = table.loc[min_index, 'rad']
+                for index, row in table.drop(index=min_index).iterrows():
+                    ang2 = row['ang']
+                    rad2 = row['rad']
+                    rad_curve1_min = min_sif.curve_min.rad_from_ang(ang1)
+                    rad_curve2_min = min_sif.curve_min.rad_from_ang(ang2)
+                    if (rad_curve1_min >= rad1) and (rad_curve2_min <= rad2):
+                        break
+                    else:
+                        ang1 = ang2
+                        rad1 = rad2
+                name_min_sr = 'sredn_min'
+                rad_min_sr = rad_curve2_min
+                ang_min_sr = ang2
+                d_min_sr = np.interp(rad_min_sr, table['rad'].to_numpy(dtype=float),
+                                     table['d'].to_numpy(dtype=float))
+                sif_min_sr = np.interp(rad_min_sr, table['rad'].to_numpy(dtype=float),
+                                       table['sif'].to_numpy(dtype=float))
+
+                table = table[table['rad']>=rad_curve2_min]
+                new_ind = -1000
+                table.loc[new_ind] = table.iloc[0]
+                table.loc[new_ind, 'name'] = name_min_sr
+                table.loc[new_ind, 'rad'] = rad_min_sr
+                table.loc[new_ind, 'ang'] = ang_min_sr
+                table.loc[new_ind, 'd'] = d_min_sr
+                table.loc[new_ind, 'sif'] = sif_min_sr
+                table = table.sort_values(by='rad')
+
+            if pack['id'] != max_sif_id:
+                max_index = table['rad'].idxmax()
+                ang1 = table.loc[max_index, 'ang']
+                rad1 = table.loc[max_index, 'rad']
+                for index, row in table.iloc[::-1].drop(index=max_index).iterrows():
+                    ang2 = row['ang']
+                    rad2 = row['rad']
+                    rad_curve1_max = max_sif.curve_max.rad_from_ang(ang1)
+                    rad_curve2_max = max_sif.curve_max.rad_from_ang(ang2)
+                    if (rad_curve1_max <= rad1) and (rad_curve2_max >= rad2):
+                        break
+                    else:
+                        ang1 = ang2
+                        rad1 = rad2
+                name_max_sr = 'sredn_max'
+                rad_max_sr = rad_curve2_max
+                ang_max_sr = ang2
+                d_max_sr = np.interp(rad_max_sr, table['rad'].to_numpy(dtype=float),
+                                     table['d'].to_numpy(dtype=float))
+                sif_max_sr = np.interp(rad_max_sr, table['rad'].to_numpy(dtype=float),
+                                       table['sif'].to_numpy(dtype=float))
+
+                table = table[table['rad']<=rad_curve2_max]
+                new_ind = 1000
+                table.loc[new_ind] = table.iloc[-1]
+                table.loc[new_ind, 'name'] = name_max_sr
+                table.loc[new_ind, 'rad'] = rad_max_sr
+                table.loc[new_ind, 'ang'] = ang_max_sr
+                table.loc[new_ind, 'd'] = d_max_sr
+                table.loc[new_ind, 'sif'] = sif_max_sr
+                table = table.sort_values(by='rad')
+
+            self.set_table(pack['id'], table)
+
     def copy(self):
-        return copy.copy(self)
+        new_obj = copy.copy(self)
+        new_obj.group_obj  = copy.copy(new_obj.group_obj)
+        new_obj.group_name = copy.copy(new_obj.group_name)
+        new_obj.group_id   = copy.copy(new_obj.group_id)
+        new_obj.marker     = copy.copy(new_obj.marker)
+        new_obj.__i = 0
+        return new_obj
+
+    def deepcopy(self):
+        return copy.deepcopy(self)
 
     def __iter__(self):
         return self
@@ -866,8 +970,10 @@ class GroupSIF:
 
         # печать кривых фронта для крайних точек
             if plot_curve_front_data:
-                sif.curve_min.plot_ax(ax, color=COLORS[pack['id']], alpha=1)
-                sif.curve_max.plot_ax(ax, color=COLORS[pack['id']], alpha=1)
+                if sif.curve_min:
+                    sif.curve_min.plot_ax(ax, color=COLORS[pack['id']], alpha=1)
+                if sif.curve_max:
+                    sif.curve_max.plot_ax(ax, color=COLORS[pack['id']], alpha=1)
 
         spec = pack['sif'].specimen
         if plot_specimen:
@@ -985,3 +1091,9 @@ class CurveFront8point:
         rads = interpolate.splev(angs, self.__tck, der=0)
         ax.plot(angs, rads, color=color, alpha=alpha)   
         return ax
+
+    def rad_from_ang(self, ang):
+        ang = np.radians(ang)
+        rad = interpolate.splev(ang, self.__tck, der=0)
+        return rad
+
