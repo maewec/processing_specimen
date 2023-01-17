@@ -583,10 +583,10 @@ class SIF2:
     def select_group(self, ang0=0, ang1=360, rad0=0, rad1=100,
                      marker='o'):
         obj_copy = copy.deepcopy(self)
-        obj_copy.table = obj_copy.table[(obj_copy.table['rad']>rad0) &\
-                                        (obj_copy.table['rad']<rad1) &\
-                                        (obj_copy.table['ang']>ang0) &\
-                                        (obj_copy.table['ang']<ang1)]
+        obj_copy.table = obj_copy.table[(obj_copy.table['rad']>=rad0) &\
+                                        (obj_copy.table['rad']<=rad1) &\
+                                        (obj_copy.table['ang']>=ang0) &\
+                                        (obj_copy.table['ang']<=ang1)]
         obj_copy.ang0 = ang0
         obj_copy.ang1 = ang1        
         obj_copy.rad0 = rad0        
