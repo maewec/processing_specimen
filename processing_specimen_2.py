@@ -15,6 +15,7 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from scipy.stats import linregress
 import itertools
+from scipy import interpolate
 
 from padmne.pdnforcrack.forcrack import OneCycle
 
@@ -32,7 +33,7 @@ COLORS = [(0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1), (1, 0, 0),
 class Specimen:
     def __init__(self, list_fronts, list_names=None, rad_obr=None, rad_def=None,
                  force=None, r_asymmetry=None, temp=None, name='',
-                 sdvig_x=0, sdvig_y=0):
+                 sdvig_x=0, sdvig_y=0, curve_front_data=None):
         """Определение фронтов КИН
         Parameters:
             list_fronts - список путей к контурам
@@ -60,6 +61,7 @@ class Specimen:
         self.name = name
         self.sdvig_x = sdvig_x
         self.sdvig_y = sdvig_y
+        self.curve_front_data = curve_front_data
         self.dir_sif = list()
         self.nominal_table = None
         self.cge_ct = list()
@@ -144,7 +146,8 @@ class Specimen:
                 obj_copy.table[name][contour] = self.__moving_average(arr, num=num)
         return obj_copy
 
-    def plot_geom_front(self, cont='c3', plot_rad_obr=True, plot_rad_def=True, dir_theta_null='S'):
+    def plot_geom_front(self, cont='c3', plot_rad_obr=True, plot_rad_def=True,
+                        dir_theta_null='S', plot_curve_front_data=True):
         """Печать геометрии фронтов трещины с нанесенными значениями КИН"""
 
         cont_dict = self.__cont_dict(cont)
@@ -201,6 +204,11 @@ class Specimen:
             for index, row in df.iterrows():
                 ax.scatter(np.deg2rad(df['ang']), df['rad'],
                            color='k', marker='x', zorder=10)
+
+        # исходные кривые фронтов
+        if plot_curve_front_data:
+            if self.curve_front_data:
+                ax = self.curve_front_data.plot_ax_initial(ax)
 
     def __sdvig(self, rad):
         div = 100
@@ -546,6 +554,7 @@ class SIF2:
             self.table['ang'] = 360 - self.table['ang']
         self.specimen = specimen
         self.r_asymmetry = specimen.r_asymmetry
+        self.curve_front_data = specimen.curve_front_data
         self.ang0 = 0
         self.ang1 = 360
         self.rad0 = 0
@@ -556,11 +565,24 @@ class SIF2:
         self.rvalue = None
         self._xline = None
         self._yline = None
+        self.define_minmax_curve()
 
     CPOOL = ['#0000c8', '#1579ff', '#00c7dd',
              '#28ffb9', '#39ff00', '#aaff00',
              '#ffe300', '#ff7100', '#ff0000']
     CMAP = mpl.colors.ListedColormap(CPOOL, 'indexed')
+
+    def define_minmax_curve(self):
+        self.sort('rad')
+        index = self.table['rad'].idxmin()
+        self.curve_min = self.curve_front_data.search_curve(self.table['rad'].loc[index],
+                                           self.table['ang'].loc[index])
+        index = self.table['rad'].idxmax()
+        self.curve_max = self.curve_front_data.search_curve(self.table['rad'].loc[index],
+                                           self.table['ang'].loc[index])
+    def get_curve(self, index):
+        return self.curve_front_data.search_curve(self.table['rad'].loc[index],
+                                                  self.table['ang'].loc[index])
 
     def sort(self, column='sif'):
         self.table = self.table.sort_values(by=[column])
@@ -592,6 +614,7 @@ class SIF2:
         obj_copy.rad0 = rad0        
         obj_copy.rad1 = rad1
         obj_copy.parent = self
+        obj_copy.define_minmax_curve()
         return obj_copy
 
     def select_by_rate(self, drop_rate_min=0, drop_rate_max='max',
@@ -602,10 +625,12 @@ class SIF2:
         obj_copy.table = obj_copy.table[(obj_copy.table['d']>=drop_rate_min) &\
                                         (obj_copy.table['d']<=drop_rate_max)]
         obj_copy.parent = self
+        obj_copy.define_minmax_curve()
         return obj_copy
 
     def solve_cge(self):
         """Определение коэффициентов СРТУ"""
+        self.sort()
         df = self.table
         x = df['sif'].to_numpy(dtype=float)
         y = df['d'].to_numpy(dtype=float)
@@ -671,7 +696,8 @@ class SIF2:
 
     def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
                   color_rate=True, plot_specimen=True,
-                  dir_theta_null='S', comment_num_points=False):
+                  dir_theta_null='S', comment_num_points=False,
+                  plot_curve_front_data=True):
         fig = plt.figure(figsize=(15, 15))
         ax = fig.add_subplot(projection='polar')
         ax.set_theta_zero_location(dir_theta_null)
@@ -716,6 +742,11 @@ class SIF2:
                     rad1 = rad_obr
         ax.set_ylim(rad0, rad1*1.1)
 
+        # печать кривых фронта для крайних точек
+        if plot_curve_front_data:
+            self.curve_min.plot_ax(ax)
+            self.curve_max.plot_ax(ax)
+
     def concatenate(self, objs_list, group_obj=None, marker='o'):
         obj_copy = copy.deepcopy(self)
         if isinstance(objs_list, list):
@@ -728,6 +759,7 @@ class SIF2:
 
         obj_copy.sort()
         obj_copy.parent = self
+        obj_copy.define_minmax_curve()
         return obj_copy
 
     def copy(self):
@@ -813,7 +845,8 @@ class GroupSIF:
 
     def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
                   plot_specimen=True, plot_parent=False,
-                  dir_theta_null='S', comment_num_points=False):
+                  dir_theta_null='S', comment_num_points=False,
+                  plot_curve_front_data=True):
         fig = plt.figure(figsize=(15,15))
         ax = fig.add_subplot(projection='polar')
         ax.set_theta_zero_location(dir_theta_null)
@@ -821,7 +854,8 @@ class GroupSIF:
         ax.grid(False)
 
         for pack in self:
-            df = pack['sif'].table
+            sif = pack['sif']
+            df = sif.table
             sc = ax.scatter(np.deg2rad(df['ang']), df['rad'],
                             color=COLORS[pack['id']], marker=pack['marker'], zorder=10,
                             label='{} {}'.format(pack['id'], pack['name']))
@@ -829,6 +863,11 @@ class GroupSIF:
             if comment_num_points:
                 for index, row in df.iterrows():
                     ax.text(np.deg2rad(row['ang']), row['rad'], str(index), zorder=20)
+
+        # печать кривых фронта для крайних точек
+            if plot_curve_front_data:
+                sif.curve_min.plot_ax(ax, color=COLORS[pack['id']], alpha=1)
+                sif.curve_max.plot_ax(ax, color=COLORS[pack['id']], alpha=1)
 
         spec = pack['sif'].specimen
         if plot_specimen:
@@ -889,3 +928,60 @@ class SIF_from_file(SIF):
 
 
 
+class CurveFrontsInterp:
+    """Построение фронта и его аппроксимация по точкам"""
+    def __init__(self, data, type_curve='8points'):
+        """
+        Parameters:
+        type_curve: '8points' - восемь радиусов с шагом 45 градусов в цилиндрической СК
+        data - двумерный массив со строками длиной 8 радиусов для разных положений фронта
+        """
+        self.type_curve = type_curve
+        self.data = data
+
+    def plot_ax_initial(self, ax):
+        if self.type_curve == '8points':
+            for rads in self.data:
+                ax = CurveFront8point(rads).plot_ax(ax)
+        return ax
+
+    def search_curve(self, rad, ang):
+        "Получение новых опорных точек кривой, проходящей через точку rad, ang"
+        if self.type_curve == '8points':
+            angs = np.linspace(0, 2*np.pi, 9)
+            lr = len(self.data[0])
+            data = np.concatenate((self.data, self.data[:,0:1]), axis=1)
+            ang = np.radians(ang)
+            # определяем интерполяционные данные для ang
+            rads4ang = []
+            for dat in data:
+                tck = interpolate.splrep(angs, dat, per=2*np.pi, k=3)
+                rads4ang.append(interpolate.splev(ang, tck, der=0))
+            rads4ang = np.array(rads4ang)
+            # получаем новые интерполяционные данные для rad
+            data4rad = np.zeros(lr)
+            for i in range(lr):
+                data4rad[i] = np.interp(rad, rads4ang, data[:, i])
+            curve_res = CurveFront8point(data4rad)
+        return curve_res
+
+
+class CurveFront8point:
+    """Описание фронта по 8 радиусам, расположенным с шагом 45 градусов в цилиндрической СК"""
+    def __init__(self, rads):
+        """
+        Parameters:
+        rads - вектор с 8 радиусами
+        """
+        self.rads = rads
+        l = len(self.rads)
+        self.angs = np.arange(0, 2*np.pi, 2*np.pi/l)
+        self.angs = np.concatenate((self.angs, self.angs[:1]+2*np.pi), axis=0)
+        self.rads = np.concatenate((self.rads, self.rads[:1]), axis=0)
+        self.__tck = interpolate.splrep(self.angs, self.rads, per=2*np.pi, k=3)
+
+    def plot_ax(self, ax, color='k', alpha=0.3):
+        angs = np.linspace(0, 2*np.pi, 1000)
+        rads = interpolate.splev(angs, self.__tck, der=0)
+        ax.plot(angs, rads, color=color, alpha=alpha)   
+        return ax
