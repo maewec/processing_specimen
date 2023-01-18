@@ -717,13 +717,15 @@ class SIF2:
         table = self.table.sort_values(by='rad')
         # расстояние между соседними точками
         inc = table['rad'].diff().to_numpy()[1:]
-        # скорости для этих отрезков
-        d = table['d'].iloc[:-1].to_numpy()
+        # средние скорости для этих отрезков
+        d = table['d'].to_numpy()
+        d = np.average(np.vstack((d[:-1], d[1:])), axis=0)
         # число циклов для этих отрезков и кумулятивный массив
         n_inc = inc / d
         n = n_inc.cumsum()
-        # расстояние
-        r = table['rad'].iloc[:-1].to_numpy()
+        # расстояние и циклы от нуля
+        r = table['rad'].to_numpy()
+        n = np.concatenate(([.0], n))
         if sdvig_r:
             r = r - r[0]
         if isinstance(group, GroupSIF):
@@ -731,7 +733,7 @@ class SIF2:
         ax.plot(n, r, marker=marker, color=color, label=label)
 
         if comment_num_points:
-            for i in range(len(table.index[:-1])):
+            for i in range(len(table.index)):
                 ax.text(n[i], r[i], str(table.index[i]))
 
         if plot_total_cycle:
