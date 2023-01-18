@@ -697,7 +697,7 @@ class SIF2:
         ax.tick_params(axis='both', which='both', labelsize=20)
         return ax
 
-    def solve_plot_cgr(self, sdvig_r=False, ax=None, marker='o',
+    def solve_plot_cgr(self, reverse_rate=False, sdvig_r=False, ax=None, marker='o',
                        plot_total_cycle=True,
                        comment_num_points=False, group=None):
         if ax:
@@ -730,6 +730,8 @@ class SIF2:
             r = r - r[0]
         if isinstance(group, GroupSIF):
             print('{} - {:.0f}'.format(label, n[-1]))
+        if reverse_rate:
+            n = n - n[-1]
         ax.plot(n, r, marker=marker, color=color, label=label)
 
         if comment_num_points:
@@ -737,7 +739,11 @@ class SIF2:
                 ax.text(n[i], r[i], str(table.index[i]))
 
         if plot_total_cycle:
-            ax.text(n[-1], r[-1], ' {:.0f}'.format(n[-1]))
+            if reverse_rate:
+                index = 0
+            else:
+                index = -1
+            ax.text(n[index], r[index], ' {:.0f}'.format(n[index]))
 
         ax.legend(fontsize=20)
         ax.grid(which='both', alpha=0.4)
@@ -885,12 +891,12 @@ class GroupSIF:
                 y = c * xline ** m
                 ax.plot(xline, y, label='CT '+name)
 
-    def solve_plot_cgr(self, sdvig_r=False, comment_num_points=False,
+    def solve_plot_cgr(self, reverse_rate=False, sdvig_r=False, comment_num_points=False,
                        plot_total_cycle=True):
         figure = plt.figure(figsize=(15, 10), dpi=200)
         ax = figure.add_subplot(1, 1, 1)
         for pack in self:
-            pack['sif'].solve_plot_cgr(sdvig_r=sdvig_r, ax=ax,
+            pack['sif'].solve_plot_cgr(reverse_rate=reverse_rate, sdvig_r=sdvig_r, ax=ax,
                                  marker=pack['marker'], plot_total_cycle=plot_total_cycle,
                                  comment_num_points=comment_num_points,
                                  group=self)
