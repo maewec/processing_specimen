@@ -697,6 +697,52 @@ class SIF2:
         ax.tick_params(axis='both', which='both', labelsize=20)
         return ax
 
+    def solve_plot_cgr(self, sdvig_r=False, ax=None, marker='o',
+                       plot_total_cycle=True,
+                       comment_num_points=False, group=None):
+        if ax:
+            if isinstance(group, GroupSIF):
+                name, id_ = group.find(self)
+                label = '{} {}'.format(id_, name)
+                color = COLORS[id_]
+            else:
+                color = '#ff0000'
+                label = 'Эксперимент'
+        else:
+            figure = plt.figure(figsize=(15, 10), dpi=200)
+            ax = figure.add_subplot(1, 1, 1)
+            color = '#ff0000'
+            label = 'Эксперимент'
+
+        table = self.table.sort_values(by='rad')
+        # расстояние между соседними точками
+        inc = table['rad'].diff().to_numpy()[1:]
+        # скорости для этих отрезков
+        d = table['d'].iloc[:-1].to_numpy()
+        # число циклов для этих отрезков и кумулятивный массив
+        n_inc = inc / d
+        n = n_inc.cumsum()
+        # расстояние
+        r = table['rad'].iloc[:-1].to_numpy()
+        if sdvig_r:
+            r = r - r[0]
+        if isinstance(group, GroupSIF):
+            print('{} - {:.0f}'.format(label, n[-1]))
+        ax.plot(n, r, marker=marker, color=color, label=label)
+
+        if comment_num_points:
+            for i in range(len(table.index[:-1])):
+                ax.text(n[i], r[i], str(table.index[i]))
+
+        if plot_total_cycle:
+            ax.text(n[-1], r[-1], ' {:.0f}'.format(n[-1]))
+
+        ax.legend(fontsize=20)
+        ax.grid(which='both', alpha=0.4)
+        ax.set_xlabel('Циклы', fontsize=20)
+        ax.set_ylabel('Длина, мм', fontsize=20)
+        ax.tick_params(axis='both', which='both', labelsize=20)
+        return ax
 
     def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
                   color_rate=True, plot_specimen=True,
@@ -733,6 +779,8 @@ class SIF2:
         else:
             ax.scatter(np.deg2rad(df['ang']), df['rad'],
                        color='k', marker='o', zorder=10)
+
+        ax.scatter([0], [0], color='r', marker='+', linewidth=10)
 
         if comment_num_points:
             for index, row in df.iterrows():
@@ -835,6 +883,16 @@ class GroupSIF:
                 y = c * xline ** m
                 ax.plot(xline, y, label='CT '+name)
 
+    def solve_plot_cgr(self, sdvig_r=False, comment_num_points=False,
+                       plot_total_cycle=True):
+        figure = plt.figure(figsize=(15, 10), dpi=200)
+        ax = figure.add_subplot(1, 1, 1)
+        for pack in self:
+            pack['sif'].solve_plot_cgr(sdvig_r=sdvig_r, ax=ax,
+                                 marker=pack['marker'], plot_total_cycle=plot_total_cycle,
+                                 comment_num_points=comment_num_points,
+                                 group=self)
+
     def cut_to_equivalent(self):
         """Обрезка лишних точек для создания эквивалентных расстояний"""
         a0_min = 0
@@ -919,6 +977,7 @@ class GroupSIF:
                 table = table.sort_values(by='rad')
 
             self.set_table(pack['id'], table)
+            sif.define_minmax_curve()
 
     def copy(self):
         new_obj = copy.copy(self)
@@ -974,6 +1033,8 @@ class GroupSIF:
                     sif.curve_min.plot_ax(ax, color=COLORS[pack['id']], alpha=1)
                 if sif.curve_max:
                     sif.curve_max.plot_ax(ax, color=COLORS[pack['id']], alpha=1)
+
+        ax.scatter([0], [0], color='r', marker='+', linewidth=10)
 
         spec = pack['sif'].specimen
         if plot_specimen:
