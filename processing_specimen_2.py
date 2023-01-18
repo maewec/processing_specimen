@@ -579,14 +579,15 @@ class SIF2:
         if self.curve_front_data:
             self.sort('rad')
             index = self.table['rad'].idxmin()
-            self.curve_min = self.curve_front_data.search_curve(self.table['rad'].loc[index],
-                                               self.table['ang'].loc[index])
+            self.curve_min = self.curve_front_data.search_curve(self.table.loc[index, 'rad'],
+                                               self.table.loc[index, 'ang'])
             index = self.table['rad'].idxmax()
-            self.curve_max = self.curve_front_data.search_curve(self.table['rad'].loc[index],
-                                               self.table['ang'].loc[index])
+            self.curve_max = self.curve_front_data.search_curve(self.table.loc[index, 'rad'],
+                                               self.table.loc[index, 'ang'])
+
     def get_curve(self, index):
-        return self.curve_front_data.search_curve(self.table['rad'].loc[index],
-                                                  self.table['ang'].loc[index])
+        return self.curve_front_data.search_curve(self.table.loc[index, 'rad'],
+                                                  self.table.loc[index, 'ang'])
 
     def sort(self, column='sif'):
         self.table = self.table.sort_values(by=[column])
@@ -808,6 +809,7 @@ class SIF2:
                 self.curve_min.plot_ax(ax)
             if self.curve_max:
                 self.curve_max.plot_ax(ax)
+        return ax
 
     def concatenate(self, objs_list, group_obj=None, marker='o'):
         obj_copy = copy.deepcopy(self)
@@ -890,6 +892,7 @@ class GroupSIF:
                 c, m, name = cge
                 y = c * xline ** m
                 ax.plot(xline, y, label='CT '+name)
+        return ax
 
     def solve_plot_cgr(self, reverse_rate=False, sdvig_r=False, comment_num_points=False,
                        plot_total_cycle=True):
@@ -900,6 +903,7 @@ class GroupSIF:
                                  marker=pack['marker'], plot_total_cycle=plot_total_cycle,
                                  comment_num_points=comment_num_points,
                                  group=self)
+        return ax
 
     def cut_to_equivalent(self):
         """Обрезка лишних точек для создания эквивалентных расстояний"""
@@ -1063,6 +1067,7 @@ class GroupSIF:
         ax.set_ylim(rad0, rad1*1.1)
 
         ax.legend()
+        return ax
 
 
 
