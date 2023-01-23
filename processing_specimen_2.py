@@ -565,6 +565,7 @@ class SIF2:
         self.rvalue = None
         self._xline = None
         self._yline = None
+        self.table_cycle = None
 
         self.curve_min = None
         self.curve_max = None
@@ -770,6 +771,49 @@ class SIF2:
         ax.set_ylabel('Длина, мм', fontsize=20)
         ax.tick_params(axis='both', which='both', labelsize=20)
         return ax
+
+    def rad_for_cycle(self, delta_n=1000, reverse_rate=True,
+                      cycle_min='min', cycle_max='max', display_table=True):
+        """Выдается таблица с радиусами и углами точек для заданных циклов"""
+        self.sort('rad')
+        table = self.table
+        if reverse_rate:
+            n_name = 'n_rev'
+        else:
+            n_name = 'n'
+
+        if cycle_min == 'min':
+            cycle_min = table[n_name].min()
+        else:
+            cycle_min = cycle_min
+
+        if cycle_max  == 'max':
+            cycle_max = table[n_name].max()
+        else:
+            cycle_max = cycle_max
+
+        if reverse_rate:
+            n_cyc = np.concatenate((np.arange(cycle_max, cycle_min, -delta_n),
+                                    [cycle_min]))
+        else:
+            n_cyc = np.concatenate((np.arange(cycle_min, cycle_max, delta_n),
+                                    [cycle_max]))
+        r_cyc = np.interp(n_cyc, table[n_name].to_numpy(dtype=float),
+                          table['rad'].to_numpy(dtype=float))
+        # убираем зависимость от смены угла 360 и 0
+        # потом возвращаем обратно
+        ang = table['ang'].to_numpy(dtype=float)
+        if (np.abs(np.diff(ang)) > 180).any():
+            ang = np.where(ang > 180, ang - 360, ang)
+        ang_cyc = np.interp(n_cyc, table[n_name].to_numpy(dtype=float),
+                            ang)
+        # возвращаем обратно
+        ang_cyc = np.where(ang_cyc < 0, ang_cyc + 360, ang_cyc)
+
+        tab_cycle = pd.DataFrame({'rad': r_cyc, 'ang': ang_cyc, 'n': n_cyc})
+        self.table_cycle = tab_cycle
+        if display_table:
+            display(table)
 
     def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
                   color_rate=True, plot_specimen=True,
