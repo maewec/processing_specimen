@@ -698,7 +698,29 @@ class SIF2:
         ax.tick_params(axis='both', which='both', labelsize=20)
         return ax
 
-    def solve_plot_cgr(self, reverse_rate=False, sdvig_r=False, ax=None, marker='o',
+    def solve_cycle(self, display_table='True'):
+        self.sort('rad')
+        table = self.table
+        # расстояние между соседними точками
+        inc = table['rad'].diff().to_numpy()[1:]
+        # средние скорости для этих отрезков
+        d = table['d'].to_numpy()
+        d = np.average(np.vstack((d[:-1], d[1:])), axis=0)
+        # число циклов для этих отрезков и кумулятивный массив
+        n_inc = inc / d
+        n = n_inc.cumsum()
+        # расстояние и циклы от нуля
+        r = table['rad'].to_numpy()
+        n = np.concatenate(([.0], n))
+        # разворот циклов
+        n_rev = n - n[-1]
+        # запись в таблицу
+        table['n'] = n
+        table['n_rev'] = n_rev
+        if display_table:
+            display(table)
+
+    def plot_cycle(self, reverse_rate=False, sdvig_r=False, ax=None, marker='o',
                        plot_total_cycle=True,
                        comment_num_points=False, group=None):
         if ax:
@@ -715,36 +737,32 @@ class SIF2:
             color = '#ff0000'
             label = 'Эксперимент'
 
-        table = self.table.sort_values(by='rad')
-        # расстояние между соседними точками
-        inc = table['rad'].diff().to_numpy()[1:]
-        # средние скорости для этих отрезков
-        d = table['d'].to_numpy()
-        d = np.average(np.vstack((d[:-1], d[1:])), axis=0)
-        # число циклов для этих отрезков и кумулятивный массив
-        n_inc = inc / d
-        n = n_inc.cumsum()
-        # расстояние и циклы от нуля
+        self.sort('rad')
+        table = self.table
         r = table['rad'].to_numpy()
-        n = np.concatenate(([.0], n))
+
         if sdvig_r:
             r = r - r[0]
-        if isinstance(group, GroupSIF):
-            print('{} - {:.0f}'.format(label, n[-1]))
         if reverse_rate:
-            n = n - n[-1]
+            n_name = 'n_rev'
+        else:
+            n_name = 'n'
+        n = table[n_name].to_numpy()
         ax.plot(n, r, marker=marker, color=color, label=label)
 
         if comment_num_points:
-            for i in range(len(table.index)):
-                ax.text(n[i], r[i], str(table.index[i]))
-
+            for index, row in table.iterrows():
+                ax.text(table.loc[index, n_name],
+                        table.loc[index, 'rad'],
+                        ' {:.0f}'.format(index))
+        if reverse_rate:
+            index = 0
+        else:
+            index = -1
         if plot_total_cycle:
-            if reverse_rate:
-                index = 0
-            else:
-                index = -1
             ax.text(n[index], r[index], ' {:.0f}'.format(n[index]))
+        if isinstance(group, GroupSIF):
+            print('{} - {:.0f}'.format(label, n[index]))
 
         ax.legend(fontsize=20)
         ax.grid(which='both', alpha=0.4)
@@ -894,15 +912,19 @@ class GroupSIF:
                 ax.plot(xline, y, label='CT '+name)
         return ax
 
-    def solve_plot_cgr(self, reverse_rate=False, sdvig_r=False, comment_num_points=False,
+    def solve_cycle(self, display_table=True):
+        for pack in self:
+            pack['sif'].solve_cycle(display_table=display_table)
+
+    def plot_cycle(self, reverse_rate=False, sdvig_r=False, comment_num_points=False,
                        plot_total_cycle=True):
         figure = plt.figure(figsize=(15, 10), dpi=200)
         ax = figure.add_subplot(1, 1, 1)
         for pack in self:
-            pack['sif'].solve_plot_cgr(reverse_rate=reverse_rate, sdvig_r=sdvig_r, ax=ax,
-                                 marker=pack['marker'], plot_total_cycle=plot_total_cycle,
-                                 comment_num_points=comment_num_points,
-                                 group=self)
+            pack['sif'].plot_cycle(reverse_rate=reverse_rate, sdvig_r=sdvig_r, ax=ax,
+                                   marker=pack['marker'], plot_total_cycle=plot_total_cycle,
+                                   comment_num_points=comment_num_points,
+                                   group=self)
         return ax
 
     def cut_to_equivalent(self):
