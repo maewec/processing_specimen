@@ -813,7 +813,7 @@ class SIF2:
         tab_cycle = pd.DataFrame({'rad': r_cyc, 'ang': ang_cyc, 'n': n_cyc})
         self.table_cycle = tab_cycle
         if display_table:
-            display(table)
+            display(self.table_cycle)
 
     def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
                   color_rate=True, plot_specimen=True,
@@ -970,6 +970,36 @@ class GroupSIF:
                                    comment_num_points=comment_num_points,
                                    group=self)
         return ax
+
+    def find_form_from_cycle(self, delta_n=1000, reverse_rate=True, display_table=True):
+        if reverse_rate:
+            n_name = 'n_rev'
+            cycle = self.group_obj[0].table[n_name].min()
+        else:
+            n_name = 'n'
+            cycle = self.group_obj[0].table[n_name].max()
+
+        for pack in self:
+            if reverse_rate:
+                cyc_ = pack['sif'].table[n_name].min()
+                if cycle > cyc_:
+                    cycle = cyc_
+            else:
+                cyc_ = pack['sif'].table[n_name].max()
+                if cycle < cyc_:
+                    cycle = cyc_
+        if reverse_rate:
+            cycle_min = cycle
+            cycle_max = 'max'
+        else:
+            cycle_min = 'min'
+            cycle_max = cycle
+
+        for pack in self:
+            pack['sif'].rad_for_cycle(delta_n=delta_n, reverse_rate=reverse_rate,
+                                      cycle_min=cycle_min, cycle_max=cycle_max,
+                                      display_table=display_table)
+                                      
 
     def cut_to_equivalent(self):
         """Обрезка лишних точек для создания эквивалентных расстояний"""
