@@ -21,7 +21,7 @@ from padmne.pdnforcrack.forcrack import OneCycle
 
 
 # цветовые комбинации для графиков
-COLORS = [(0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1), (1, 0, 0),
+COLORS = [(0, 0, 0), (0, 0, 1), (0, 1, 0), (1, 0, 0), (0, 1, 1),
           (1, 0, 1), (1, 1, 0), (0, 0, 0.5), (0, 0.5, 0), (0, 0.5, 0.5),
           (0, 0.5, 1), (0, 1, 0.5), (0.5, 0, 0), (0.5, 0, 0.5), (0.5, 0, 1),
           (0.5, 0.5, 0), (0.5, 0.5, 0.5), (0.5, 0.5, 1), (0.5, 1, 0), (0.5, 1, 0.5),
@@ -1003,7 +1003,6 @@ class GroupSIF:
             pack['sif'].rad_for_cycle(delta_n=delta_n, reverse_rate=reverse_rate,
                                       cycle_min=cycle_min, cycle_max=cycle_max,
                                       display_table=display_table)
-                                      
 
     def cut_to_equivalent(self, outer=True, inner=True):
         """Обрезка лишних точек для создания эквивалентных расстояний"""
@@ -1216,54 +1215,56 @@ class SIF_from_file(SIF):
 
 class CurveFrontsInterp:
     """Построение фронта и его аппроксимация по точкам"""
-    def __init__(self, data, type_curve='8points'):
+    def __init__(self, data):
         """
         Parameters:
-        type_curve: '8points' - восемь радиусов с шагом 45 градусов в цилиндрической СК
-        data - двумерный массив со строками длиной 8 радиусов для разных положений фронта
+        data - список двумерных массив со строками радиусов и углов для разных положений фронта
         """
-        self.type_curve = type_curve
         self.data = data
+        self.curves = [CurveFront8point(dat[0], dat[1]) for dat in data]
 
     def plot_ax_initial(self, ax):
-        if self.type_curve == '8points':
-            for rads in self.data:
-                ax = CurveFront8point(rads).plot_ax(ax)
+        for curv in self.curves:
+            ax = curv.plot_ax(ax)
         return ax
 
     def search_curve(self, rad, ang):
         "Получение новых опорных точек кривой, проходящей через точку rad, ang"
-        if self.type_curve == '8points':
-            angs = np.linspace(0, 2*np.pi, 9)
-            lr = len(self.data[0])
-            data = np.concatenate((self.data, self.data[:,0:1]), axis=1)
-            ang = np.radians(ang)
-            # определяем интерполяционные данные для ang
-            rads4ang = []
-            for dat in data:
-                tck = interpolate.splrep(angs, dat, per=2*np.pi, k=3)
-                rads4ang.append(interpolate.splev(ang, tck, der=0))
-            rads4ang = np.array(rads4ang)
-            # получаем новые интерполяционные данные для rad
-            data4rad = np.zeros(lr)
-            for i in range(lr):
-                data4rad[i] = np.interp(rad, rads4ang, data[:, i])
-            curve_res = CurveFront8point(data4rad)
-        return curve_res
+        ang = np.radians(ang)
+        num_angs = 1000
+        l_c = len(self.curves)
+        rads4ang = np.zeros(l_c)
+        curv_neutral_rad_arr = np.zeros((l_c, num_angs))
+        i = 0
+        for curv in self.curves:
+            curv_neutral = curv.convert_neutral(num_angs=num_angs)
+            curv_neutral_rad_arr[i,:] = curv_neutral.rads[:-1]
+            rads4ang[i] = curv_neutral.rad_from_ang(ang)
+            i += 1
+        angs = np.degrees(curv_neutral.angs[:-1])
+        rad_new = np.zeros(num_angs)
+        for i in range(num_angs):
+            rad_new[i] = np.interp(rad, rads4ang, curv_neutral_rad_arr[:, i])
+        return CurveFront8point(rads=rad_new, angs=angs)
+
 
 
 class CurveFront8point:
     """Описание фронта по 8 радиусам, расположенным с шагом 45 градусов в цилиндрической СК"""
-    def __init__(self, rads):
+    def __init__(self, rads, angs=None):
         """
         Parameters:
-        rads - вектор с 8 радиусами
+        dat - двухмерный массив со строками радиусов и углов для разных положений фронта
         """
         self.rads = rads
-        l = len(self.rads)
-        self.angs = np.arange(0, 2*np.pi, 2*np.pi/l)
-        self.angs = np.concatenate((self.angs, self.angs[:1]+2*np.pi), axis=0)
+        if angs is None:
+            l = len(self.rads)
+            self.angs = np.arange(0, 2*np.pi, 2*np.pi/l)
+        else:
+            self.angs = np.radians(angs)
         self.rads = np.concatenate((self.rads, self.rads[:1]), axis=0)
+        self.angs = np.concatenate((self.angs, self.angs[:1]+2*np.pi), axis=0)
+
         self.__tck = interpolate.splrep(self.angs, self.rads, per=2*np.pi, k=3)
 
     def plot_ax(self, ax, color='k', alpha=0.3):
@@ -1276,4 +1277,9 @@ class CurveFront8point:
         ang = np.radians(ang)
         rad = interpolate.splev(ang, self.__tck, der=0)
         return rad
+
+    def convert_neutral(self, num_angs=1000):
+        angs = np.arange(0, 360, 360/num_angs)
+        rads = self.rad_from_ang(angs)
+        return CurveFront8point(rads, angs)
 
