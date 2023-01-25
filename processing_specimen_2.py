@@ -1230,7 +1230,6 @@ class CurveFrontsInterp:
 
     def search_curve(self, rad, ang):
         "Получение новых опорных точек кривой, проходящей через точку rad, ang"
-        ang = np.radians(ang)
         num_angs = 1000
         l_c = len(self.curves)
         rads4ang = np.zeros(l_c)
@@ -1285,7 +1284,7 @@ class CurveFront8point:
         return rad
 
     def convert_neutral(self, num_angs=1000):
-        angs = np.arange(0, 360, 360/num_angs)
+        angs = np.linspace(0, 360, num_angs, endpoint=False)
         rads = self.rad_from_ang(angs)
         return CurveFront8point(rads, angs)
 
