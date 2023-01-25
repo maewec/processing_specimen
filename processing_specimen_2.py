@@ -986,11 +986,11 @@ class GroupSIF:
         for pack in self:
             if reverse_rate:
                 cyc_ = pack['sif'].table[n_name].min()
-                if cycle > cyc_:
+                if cycle < cyc_:
                     cycle = cyc_
             else:
                 cyc_ = pack['sif'].table[n_name].max()
-                if cycle < cyc_:
+                if cycle > cyc_:
                     cycle = cyc_
         if reverse_rate:
             cycle_min = cycle
@@ -1247,6 +1247,12 @@ class CurveFrontsInterp:
             rad_new[i] = np.interp(rad, rads4ang, curv_neutral_rad_arr[:, i])
         return CurveFront8point(rads=rad_new, angs=angs)
 
+    def insert_dop_form(self, list_df, angs_arr):
+        """Добавить на существующие кривые фронтов врезку с новыми радиусами и углами,
+        list_df - полученные таблицы, в которых определен рост циклов
+        angs_arr - вектор углов, которые остаются от исходной кривой"""
+        ang_middle = []
+
 
 
 class CurveFront8point:
@@ -1280,6 +1286,12 @@ class CurveFront8point:
 
     def convert_neutral(self, num_angs=1000):
         angs = np.arange(0, 360, 360/num_angs)
+        rads = self.rad_from_ang(angs)
+        return CurveFront8point(rads, angs)
+
+    def convert_angs(self, angs_arr):
+        """Получение кривой с опорными радиусами в массиве заданных углов angs_arr"""
+        angs = angs_arr
         rads = self.rad_from_ang(angs)
         return CurveFront8point(rads, angs)
 
