@@ -31,13 +31,15 @@ COLORS = [(0, 0, 0), (0, 0, 1), (0, 1, 0), (1, 0, 0), (0, 1, 1),
 
 
 class Specimen:
-    def __init__(self, list_fronts=None, list_names=None, rad_obr=None, rad_def=None,
+    def __init__(self, list_fronts=None, list_names=None, reverse_ang=False, rad_obr=None, rad_def=None,
                  force=None, r_asymmetry=None, temp=None, name='',
                  sdvig_x=0, sdvig_y=0, curve_front_data=None):
         """Определение фронтов КИН
         Parameters:
             list_fronts - список путей к контурам
-            list_names - соответствующие им имена"""
+            list_names - соответствующие им имена
+            reverse_ang - разворачивать ли фронты по оси симметрии 0 - 180,
+              можно задать список для каждого фронта"""
 
         self.list_fronts = list_fronts
         if list_fronts:
@@ -45,13 +47,19 @@ class Specimen:
                 self.list_names = [x for x in range(len(self.list_fronts))]
             else:
                 self.list_names = list_names
+            if isinstance(reverse_ang, bool):
+                self.reverse_ang = []
+                for i in range(len(list_fronts)):
+                    self.reverse_ang.append(reverse_ang)
+            else:
+                self.reverse_ang = reverse_ang
         else:
-            list_names = list_names
+            self.list_names = list_names
 
         self.table = dict()
         if list_fronts:
             for i in range(len(list_fronts)):
-                self.table[self.list_names[i]] = self.__read_file(self.list_fronts[i])
+                self.table[self.list_names[i]] = self.__read_file(i)
 
         self.rad_obr = rad_obr
         if self.rad_obr:
@@ -77,7 +85,8 @@ class Specimen:
     NAME_DROP = ['node']
     NAMES_COLUMNS = NAME_DROP + NAMES_COORD + NAMES_COUNTUR
 
-    def __read_file(self, path):
+    def __read_file(self, i):
+        path = self.list_fronts[i]
         names = Specimen.NAMES_COLUMNS
         index_col = Specimen.NAME_INDEX
         drop = Specimen.NAME_DROP
@@ -85,6 +94,8 @@ class Specimen:
                            index_col=index_col).drop(columns=drop)
         # отрицательные углы конвертируются в положительные
         df.index = np.where(df.index < 0, 360 + df.index, df.index)
+        if self.reverse_ang[i]:
+            df.index = 360 - df.index
         df = df.sort_index()
         return df
 
