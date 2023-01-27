@@ -288,6 +288,7 @@ class Specimen:
             k = df.iloc[(np.abs(df.index-angle)).argsort()[:1]]
             k = k[['rad', contour]].rename(columns={contour: 'c'})
             direct_sif = direct_sif.append(k)
+            direct_sif = direct_sif.sort_values(by='rad')
 
         if print_decart_coord:
             x = np.sin(np.deg2rad(angle)) * self.rad_obr
