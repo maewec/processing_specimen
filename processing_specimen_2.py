@@ -16,7 +16,7 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 from scipy.stats import linregress
 import itertools
 from scipy import interpolate
-from PIL import Image
+from PIL import Image, ImageOps
 
 from padmne.pdnforcrack.forcrack import OneCycle
 
@@ -208,7 +208,7 @@ class Specimen:
             rad, deg360 = self.__sdvig(self.rad_def)
             ax.plot(deg360, rad, 'k')
 
-        ax.scatter([0], [0], color='r', marker='+', linewidth=10)
+        ax.scatter([0], [0], color='r', marker='+', linewidth=2)
 
         # линии снятия значений КИН
         for sif in self.dir_sif:
@@ -1376,7 +1376,9 @@ class ImageSpecimen:
         dif = self.pcp - self.prp
         ang = np.degrees(np.arctan(dif[1]/dif[0]))
         # и добавляем ручной поворот
-        ang = ang + self.angle
+        # т.к. при внедрении картинки в график задан аргумент origin='lower',
+        # угол идет с минусом
+        ang = -ang + self.angle
 
         # находим координаты в пикселях нулевой точки графика
         # и пересчитываем новые координаты центральной точки изображения
@@ -1385,13 +1387,21 @@ class ImageSpecimen:
         point_center_graph = np.array(np.around(point_center_graph, 0), dtype=int)
         pcp_resize = self.pcp * k_resize
         pcp_resize = np.array(np.around(pcp_resize, 0), dtype=int)
+        # т.к. при внедрении картинки в график задан аргумент origin='lower',
+        # то он переворачивает картинку по вертикали, надо перечитать координаты
+        pcp_resize[1] = new_y - pcp_resize[1]
         sdvig = point_center_graph - pcp_resize
+
+        # т.к. при внедрении картинки в график задан аргумент origin='lower',
+        # надо обратно перевернуть изображение (см. выше)
+        img = ImageOps.flip(img)
 
         # поворот относительно центральной точки
         img = img.rotate(angle=ang, expand=False, center=tuple(pcp_resize),
                          resample=Image.BILINEAR, fillcolor='white')
+
         # внедрение изображения в график
-        fig.figimage(img, sdvig[0], sdvig[1], zorder=-1, resize=False, origin='upper')
+        fig.figimage(img, sdvig[0], sdvig[1], zorder=-1, resize=False, origin='lower')
 
         name = '{}_{:2.0f}.png'.format(self.name, ImageSpecimen.count)
         ImageSpecimen.count += 1
