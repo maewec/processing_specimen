@@ -634,10 +634,16 @@ class SIF2:
     def select_group(self, ang0=0, ang1=360, rad0=0, rad1=100,
                      marker='o'):
         obj_copy = copy.deepcopy(self)
+        # выбор по радиусу
         obj_copy.table = obj_copy.table[(obj_copy.table['rad']>=rad0) &\
-                                        (obj_copy.table['rad']<=rad1) &\
-                                        (obj_copy.table['ang']>=ang0) &\
-                                        (obj_copy.table['ang']<=ang1)]
+                                        (obj_copy.table['rad']<=rad1)]
+        # выбор по углу
+        if ang0 > ang1:
+            obj_copy.table = pd.concat([obj_copy.table[(obj_copy.table['ang']>=ang0)],
+                                        obj_copy.table[(obj_copy.table['ang']<=ang1)]])
+        else:
+            obj_copy.table = obj_copy.table[(obj_copy.table['ang']>=ang0) &\
+                                            (obj_copy.table['ang']<=ang1)]
         obj_copy.ang0 = ang0
         obj_copy.ang1 = ang1        
         obj_copy.rad0 = rad0        
@@ -1042,72 +1048,74 @@ class GroupSIF:
             sif = pack['sif']
             table = sif.table
             if inner:
-                min_index = table['rad'].idxmin()
-                ang1 = table.loc[min_index, 'ang']
-                rad1 = table.loc[min_index, 'rad']
-                for index, row in table.drop(index=min_index).iterrows():
-                    ang2 = row['ang']
-                    rad2 = row['rad']
-                    rad_curve1_min = min_sif.curve_min.rad_from_ang(ang1)
-                    rad_curve2_min = min_sif.curve_min.rad_from_ang(ang2)
-                    if (rad_curve1_min >= rad1) and (rad_curve2_min <= rad2):
-                        break
-                    else:
-                        ang1 = ang2
-                        rad1 = rad2
-                name_min_sr = 'sredn_min'
-                rad_min_sr = rad_curve2_min
-                ang_min_sr = ang2
-                d_min_sr = np.interp(rad_min_sr, table['rad'].to_numpy(dtype=float),
-                                     table['d'].to_numpy(dtype=float))
-                if 'sif' in table:
-                    sif_min_sr = np.interp(rad_min_sr, table['rad'].to_numpy(dtype=float),
-                                           table['sif'].to_numpy(dtype=float))
+                if pack['id'] != min_sif_id:
+                    min_index = table['rad'].idxmin()
+                    ang1 = table.loc[min_index, 'ang']
+                    rad1 = table.loc[min_index, 'rad']
+                    for index, row in table.drop(index=min_index).iterrows():
+                        ang2 = row['ang']
+                        rad2 = row['rad']
+                        rad_curve1_min = min_sif.curve_min.rad_from_ang(ang1)
+                        rad_curve2_min = min_sif.curve_min.rad_from_ang(ang2)
+                        if (rad_curve1_min >= rad1) and (rad_curve2_min <= rad2):
+                            break
+                        else:
+                            ang1 = ang2
+                            rad1 = rad2
+                    name_min_sr = 'sredn_min'
+                    rad_min_sr = rad_curve2_min
+                    ang_min_sr = ang2
+                    d_min_sr = np.interp(rad_min_sr, table['rad'].to_numpy(dtype=float),
+                                         table['d'].to_numpy(dtype=float))
+                    if 'sif' in table:
+                        sif_min_sr = np.interp(rad_min_sr, table['rad'].to_numpy(dtype=float),
+                                               table['sif'].to_numpy(dtype=float))
 
-                table = table[table['rad']>=rad_curve2_min]
-                new_ind = -1000
-                table.loc[new_ind] = table.iloc[0]
-                table.loc[new_ind, 'name'] = name_min_sr
-                table.loc[new_ind, 'rad'] = rad_min_sr
-                table.loc[new_ind, 'ang'] = ang_min_sr
-                table.loc[new_ind, 'd'] = d_min_sr
-                if 'sif' in table:
-                    table.loc[new_ind, 'sif'] = sif_min_sr
-                table = table.sort_values(by='rad')
+                    table = table[table['rad']>=rad_curve2_min]
+                    new_ind = -1000
+                    table.loc[new_ind] = table.iloc[0]
+                    table.loc[new_ind, 'name'] = name_min_sr
+                    table.loc[new_ind, 'rad'] = rad_min_sr
+                    table.loc[new_ind, 'ang'] = ang_min_sr
+                    table.loc[new_ind, 'd'] = d_min_sr
+                    if 'sif' in table:
+                        table.loc[new_ind, 'sif'] = sif_min_sr
+                    table = table.sort_values(by='rad')
 
             if outer:
-                max_index = table['rad'].idxmax()
-                ang1 = table.loc[max_index, 'ang']
-                rad1 = table.loc[max_index, 'rad']
-                for index, row in table.iloc[::-1].drop(index=max_index).iterrows():
-                    ang2 = row['ang']
-                    rad2 = row['rad']
-                    rad_curve1_max = max_sif.curve_max.rad_from_ang(ang1)
-                    rad_curve2_max = max_sif.curve_max.rad_from_ang(ang2)
-                    if (rad_curve1_max <= rad1) and (rad_curve2_max >= rad2):
-                        break
-                    else:
-                        ang1 = ang2
-                        rad1 = rad2
-                name_max_sr = 'sredn_max'
-                rad_max_sr = rad_curve2_max
-                ang_max_sr = ang2
-                d_max_sr = np.interp(rad_max_sr, table['rad'].to_numpy(dtype=float),
-                                     table['d'].to_numpy(dtype=float))
-                if 'sif' in table:
-                    sif_max_sr = np.interp(rad_max_sr, table['rad'].to_numpy(dtype=float),
-                                           table['sif'].to_numpy(dtype=float))
+                if pack['id'] != max_sif_id:
+                    max_index = table['rad'].idxmax()
+                    ang1 = table.loc[max_index, 'ang']
+                    rad1 = table.loc[max_index, 'rad']
+                    for index, row in table.iloc[::-1].drop(index=max_index).iterrows():
+                        ang2 = row['ang']
+                        rad2 = row['rad']
+                        rad_curve1_max = max_sif.curve_max.rad_from_ang(ang1)
+                        rad_curve2_max = max_sif.curve_max.rad_from_ang(ang2)
+                        if (rad_curve1_max <= rad1) and (rad_curve2_max >= rad2):
+                            break
+                        else:
+                            ang1 = ang2
+                            rad1 = rad2
+                    name_max_sr = 'sredn_max'
+                    rad_max_sr = rad_curve2_max
+                    ang_max_sr = ang2
+                    d_max_sr = np.interp(rad_max_sr, table['rad'].to_numpy(dtype=float),
+                                         table['d'].to_numpy(dtype=float))
+                    if 'sif' in table:
+                        sif_max_sr = np.interp(rad_max_sr, table['rad'].to_numpy(dtype=float),
+                                               table['sif'].to_numpy(dtype=float))
 
-                table = table[table['rad']<=rad_curve2_max]
-                new_ind = 1000
-                table.loc[new_ind] = table.iloc[-1]
-                table.loc[new_ind, 'name'] = name_max_sr
-                table.loc[new_ind, 'rad'] = rad_max_sr
-                table.loc[new_ind, 'ang'] = ang_max_sr
-                table.loc[new_ind, 'd'] = d_max_sr
-                if 'sif' in table:
-                    table.loc[new_ind, 'sif'] = sif_max_sr
-                table = table.sort_values(by='rad')
+                    table = table[table['rad']<=rad_curve2_max]
+                    new_ind = 1000
+                    table.loc[new_ind] = table.iloc[-1]
+                    table.loc[new_ind, 'name'] = name_max_sr
+                    table.loc[new_ind, 'rad'] = rad_max_sr
+                    table.loc[new_ind, 'ang'] = ang_max_sr
+                    table.loc[new_ind, 'd'] = d_max_sr
+                    if 'sif' in table:
+                        table.loc[new_ind, 'sif'] = sif_max_sr
+                    table = table.sort_values(by='rad')
 
             self.set_table(pack['id'], table)
             sif.define_minmax_curve()
