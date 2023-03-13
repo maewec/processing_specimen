@@ -588,6 +588,7 @@ class SIF2:
         self.rvalue = None
         self._xline = None
         self._yline = None
+        self._yline_sko = None
         self.table_cycle = None
 
         self.curve_min = None
@@ -673,13 +674,22 @@ class SIF2:
         self.m = slope
         self.c = 10**intercept
         self.rvalue = rvalue
+        # C c учетом СКО
+        self.c_sko = {i: self.c*10**(i*stderr) for i in [-3, -1, 1, 3]}
         print('m = {:.3f}\nC = {:.6e}\nR = {:.3f}'.format(self.m, self.c, self.rvalue))
+        print(stderr)
+        print(self.c_sko)
         
         self._xline = np.linspace(df['sif'].min(), df['sif'].max(), 100)
         self._yline = self.c * self._xline ** self.m
+        self._yline_sko = {i: self.c_sko[i] * self._xline ** self.m for i in self.c_sko}
 
     def plot_cge(self, plot_coef=True, plot_cge_ct=True, ax=None, marker='o',
-                 comment_num_points=False, group=None):
+                 comment_num_points=False, group=None, sko=False):
+        """
+        Parameter:
+        sko - включение отображения СКО, True или список степеней [-3, -1, 1, 4]
+        """
         if ax:
             if isinstance(group, GroupSIF):
                 name, id_ = group.find(self)
@@ -718,6 +728,14 @@ class SIF2:
                 c, m, name = cge
                 y = c * self._xline ** m
                 ax.plot(self._xline, y, label='CT '+name)
+
+        if sko:
+            if isinstance(sko, bool):
+                sko = list(self.c_sko.keys())
+            for i in sko:
+                ax.plot(self._xline, self._yline_sko[i], color=color_coef,
+                        linestyle='--')
+
 
         ax.legend(fontsize=20)
         ax.grid(which='both', alpha=0.4)
