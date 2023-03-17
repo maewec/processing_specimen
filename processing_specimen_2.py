@@ -664,6 +664,18 @@ class SIF2:
         obj_copy.define_minmax_curve()
         return obj_copy
 
+    def drop_points(self, index, marker='o'):
+        """
+        Parameter:
+        index - list или int индексов таблицы
+        """
+        obj_copy = copy.deepcopy(self)
+        obj_copy.table = obj_copy.table.drop(index=index)
+        obj_copy.parent = self
+        obj_copy.define_minmax_curve()
+        return obj_copy
+
+
     def solve_cge(self):
         """Определение коэффициентов СРТУ"""
         self.sort()
@@ -1379,7 +1391,10 @@ class ImageSpecimen:
 
         self.img = Image.open(pathfile)
         # в одном мм пикселей
-        self.pix_in_mm = np.abs((self.pcp - self.prp) / (self.pcm - self.prm))[0]
+        self.pix_in_mm = np.sqrt(
+                                 np.sum(np.square(self.pcp - self.prp)) /\
+                                 np.sum(np.square(self.pcm - self.prm))
+                                 )
         self.name = os.path.splitext(os.path.basename(self.pathfile))[0]
 
     def save_fig(self, fig):
