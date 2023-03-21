@@ -20,6 +20,8 @@ from PIL import Image, ImageOps
 
 from padmne.pdnforcrack.forcrack import OneCycle
 
+plt.rcParams['figure.facecolor'] = (1,1,1,1)
+
 
 # цветовые комбинации для графиков
 COLORS = [(0, 0, 0), (0, 0, 1), (0, 1, 0), (1, 0, 0), (0, 1, 1),
@@ -697,7 +699,7 @@ class SIF2:
         self._yline_sko = {i: self.c_sko[i] * self._xline ** self.m for i in self.c_sko}
 
     def plot_cge(self, plot_coef=True, plot_cge_ct=True, ax=None, marker='o',
-                 comment_num_points=False, group=None, sko=False):
+                 comment_num_points=False, group=None, sko=False, print_text_coef=True):
         """
         Parameter:
         sko - включение отображения СКО, True или список степеней [-3, -1, 1, 4]
@@ -747,6 +749,23 @@ class SIF2:
             for i in sko:
                 ax.plot(self._xline, self._yline_sko[i], color=color_coef,
                         linestyle='--')
+
+        if print_text_coef:
+            if sko:
+                c_copy = self.c_sko.copy()
+                c_copy[0] = self.c
+                c_copy = dict(sorted(c_copy.items()))
+            else:
+                c_copy = dict()
+                c_copy[0] = self.c
+            text = ''
+            for i in c_copy:
+                c_text = '{:.4e}'.format(c_copy[i])
+                c_text = '{}\cdot 10^{{{}}}'.format(*c_text.split('e'))
+                t = '$dl/dN = {} \cdot \Delta K ^{{{:.4f}}}$\n'.format(c_text, self.m)
+                text += t
+            bbox = dict(boxstyle="round", fc='white', alpha=0.4)
+            ax.text(0.95, 0.05, text[:-1], fontsize=20, ha='right', va='bottom', transform=ax.transAxes, bbox=bbox)
 
 
         ax.legend(fontsize=20)
@@ -1003,7 +1022,7 @@ class GroupSIF:
         for pack in self:
             pack['sif'].plot_cge(plot_coef=plot_coef, plot_cge_ct=False, ax=ax,
                                  marker=pack['marker'], comment_num_points=comment_num_points,
-                                 group=self)
+                                 group=self, print_text_coef=False)
 
         xline = np.linspace(*ax.set_xlim(), 100)
 
