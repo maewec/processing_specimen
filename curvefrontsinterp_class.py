@@ -12,9 +12,13 @@ class CurveFrontsInterp:
         self.data = data
         self.curves = [CurveFront8point(dat[0], dat[1]) for dat in data]
 
-    def plot_ax_initial(self, ax):
-        for curv in self.curves:
-            ax = curv.plot_ax(ax)
+    def plot_ax_initial(self, ax, color='k', alpha=0.3, only_min_max=False):
+        if only_min_max:
+            for curv in [self.curves[0], self.curves[-1]]:
+                ax = curv.plot_ax(ax, color=color, alpha=alpha)
+        else:
+            for curv in self.curves:
+                ax = curv.plot_ax(ax, color=color, alpha=alpha)
         return ax
 
     def search_curve(self, rad, ang):

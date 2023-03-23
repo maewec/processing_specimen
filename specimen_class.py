@@ -137,8 +137,17 @@ class Specimen:
 
     def plot_geom_front(self, cont=None, plot_rad_obr=True, plot_rad_def=True,
                         dir_theta_null='S', plot_curve_front_data=True,
-                        save_plot_with_image=None):
-        """Печать геометрии фронтов трещины с нанесенными значениями КИН"""
+                        save_plot_with_image=None, settings=dict()):
+        """Печать геометрии фронтов трещины с нанесенными значениями КИН
+        Parameter:
+            settings - словарь с настройками:
+                color_sif_cloud - цвет точек
+                marker_sif_cloud - маркер точек
+                color_curve - цвет кривых
+                alpha_curve - прозрачность кривых
+                only_min_max_curve - только минимальная и максимальная кривые
+                axis_switch - 'off', 'on' - выключение осей и шкал
+                """
 
         cont_dict = self.__cont_dict(cont)
         
@@ -176,7 +185,7 @@ class Specimen:
         if self.rad_obr and plot_rad_obr:
             rad, deg360 = self.__sdvig(self.rad_obr)
             ax.plot(deg360, rad, 'k')
-            ax.set_ylim(0, self.rad_obr+0.5)
+        ax.set_ylim(0, self.rad_obr+0.5)
         if self.rad_def and plot_rad_def:
             rad, deg360 = self.__sdvig(self.rad_def)
             ax.plot(deg360, rad, 'k')
@@ -192,14 +201,41 @@ class Specimen:
         # облако точек с sif_cloud
         if self.sif_cloud:
             df = self.sif_cloud.table
+            try:
+                color = settings['color_sif_cloud']
+            except KeyError:
+                color='k'
+            try:
+                marker = settings['marker_sif_cloud']
+            except KeyError:
+                marker = 'x'
             for index, row in df.iterrows():
                 ax.scatter(np.deg2rad(df['ang']), df['rad'],
-                           color='k', marker='x', zorder=10)
+                           color=color, marker=marker, zorder=10)
 
         # исходные кривые фронтов
         if plot_curve_front_data:
             if self.curve_front_data:
-                ax = self.curve_front_data.plot_ax_initial(ax)
+                try:
+                    color = settings['color_curve']
+                except KeyError:
+                    color='k'
+                try:
+                    alpha = settings['alpha_curve']
+                except KeyError:
+                    alpha = 0.3
+                try:
+                    only_min_max = settings['only_min_max_curve']
+                except KeyError:
+                    only_min_max = True
+                ax = self.curve_front_data.plot_ax_initial(ax, color=color,
+                        alpha=alpha, only_min_max=only_min_max)
+
+        try:
+            axis_switch =  settings['axis_switch']
+            ax.axis(axis_switch)
+        except:
+            pass
 
         # если есть объект с изображением поверхности излома, то сохранить его
         if isinstance(save_plot_with_image, ImageSpecimen):
