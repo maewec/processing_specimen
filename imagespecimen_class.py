@@ -1,5 +1,7 @@
 from ._import import *
 
+import matplotlib.patches as mpatches
+
 
 
 class ImageSpecimen:
@@ -8,14 +10,20 @@ class ImageSpecimen:
     count = 0
 
     def __init__(self, pathfile, point_center_pix, point_center_mm,
-                 point_rot_pix, point_rot_mm, angle=0):
+                 point_rot_pix, point_rot_mm, angle=0, unit='mm',
+                 point_end_marker=(0.9, 0.1), color_marker='r', linewidth_marker=None,
+                 fontsize_marker=None):
         """Parameter:
         pathfile - путь до файла
         point_center_pix - координаты центра в пикселях
         point_center_mm - координаты центра в мм
         point_rot_pix - координаты второй точки в пикселях
         point_rot_mm - координаты второй точки в мм
-        angle - дополнительный поворот в градусах"""
+        angle - дополнительный поворот в градусах
+        unit - размерность для надписи метки
+        point_end_marker - место расположения конца метки в относительных единицах
+        linewidth_marker - ширина метки
+        fontsize_marker - размер шрифта метки"""
 
         self.pathfile = pathfile
         self.pcp = np.array(point_center_pix)
@@ -23,6 +31,11 @@ class ImageSpecimen:
         self.prp = np.array(point_rot_pix)
         self.prm = np.array(point_rot_mm)
         self.angle = angle
+        self.unit = unit
+        self.point_end_marker = point_end_marker
+        self.color_marker = color_marker
+        self.linewidth_marker = linewidth_marker
+        self.fontsize_marker = fontsize_marker
 
         self.img = Image.open(pathfile)
         # в одном мм пикселей
@@ -75,6 +88,22 @@ class ImageSpecimen:
         # поворот относительно центральной точки
         img = img.rotate(angle=ang, expand=False, center=tuple(pcp_resize),
                          resample=Image.BILINEAR, fillcolor='white')
+
+        # добавляем размерную метку
+        ax2 = fig.add_axes([0, 0, 1, 1], zorder=1)
+        marker_in_inch = pix_graph / fig.dpi
+        end_marker = fig.get_size_inches() * np.array(self.point_end_marker)   #позиция конца метки
+        start_marker = end_marker - np.array([marker_in_inch, 0])
+        arr_style = mpatches.ArrowStyle('|-|')
+        arr = mpatches.FancyArrowPatch(end_marker, start_marker,
+                arrowstyle=arr_style, transform=fig.dpi_scale_trans,
+                color=self.color_marker, shrinkA=0, shrinkB=0,
+                linewidth=self.linewidth_marker)
+        ax2.add_patch(arr)
+        ax2.text(*start_marker, '{} {}\n'.format(l, self.unit),
+                 transform=fig.dpi_scale_trans,
+                 color=self.color_marker, fontsize=self.fontsize_marker)
+        ax2.axis('off')
 
         # внедрение изображения в график
         fig.figimage(img, sdvig[0], sdvig[1], zorder=-1, resize=False, origin='lower')
