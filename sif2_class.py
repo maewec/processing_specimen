@@ -217,6 +217,35 @@ class SIF2:
         ax.tick_params(axis='both', which='both', labelsize=20)
         return ax
 
+    def drop_dev_max(self, part_top=0.025, part_bottom=0.025):
+        """Удаление точек сверху и снизу и создание нового экземпляра
+        Parameters:
+            part_top - доля точек, удаляемая сверху
+            part_bottom - доля точек, удаляемая снизу
+        """
+        obj_copy = copy.deepcopy(self)
+        obj_copy.solve_cge()
+        obj_copy.table['dev_log'] = None
+        m = obj_copy.m
+        clog = np.log10(obj_copy.c)
+        for index, row in obj_copy.table.iterrows():
+            k0 = np.log10(row['sif'])
+            d0 = np.log10(row['d'])
+            dev = d0 - m*k0 - clog
+            obj_copy.table.loc[index, 'dev_log'] = dev
+        le = len(obj_copy.table)
+        drop_num_top = int(round(part_top*le, 0))
+        drop_num_bottom = int(round(part_bottom*le, 0))
+        obj_copy.sort('dev_log')
+
+        obj_copy.table = obj_copy.table.iloc[drop_num_bottom: le - drop_num_top]
+
+        obj_copy.solve_cge()
+        obj_copy.parent = self
+        obj_copy.define_minmax_curve()
+        obj_copy.sort()
+        return obj_copy
+
     def solve_cycle(self, display_table='True'):
         self.sort('rad')
         table = self.table
