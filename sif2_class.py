@@ -1,6 +1,8 @@
 from ._import import *
 from .groupsif_class import GroupSIF
 
+figsize = (15, 10)
+dpi = 300
 
 class SIF2:
     """
@@ -157,7 +159,7 @@ class SIF2:
                 label = 'Эксперимент'
                 label2 = 'Аппроксимация'
         else:
-            figure = plt.figure(figsize=(15, 10), dpi=200)
+            figure = plt.figure(figsize=figsize, dpi=dpi)
             ax = figure.add_subplot(1, 1, 1)
             color_coef = '#000000'
             color = '#ff0000'
@@ -215,6 +217,70 @@ class SIF2:
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.tick_params(axis='both', which='both', labelsize=20)
+        return ax
+
+    def plot_length_of_cycle(self, cm_parent=0, plot_ct=True, ax=None, interpol=1):
+        """Зависимость длины трещины от количества циклов по фракт данным и по
+        вычисленным C и m
+        Parameter:
+            cm_parent - 0 - c и m данного экземпляра, 1 - экземпляра родителя и тд
+        """
+        if ax:
+            if isinstance(group, GroupSIF):
+                name, id_ = group.find(self)
+                color_coef = COLORS[id_]
+                color = COLORS[id_]
+            else:
+                color_coef = '#000000'
+                color = '#ff0000'
+        else:
+            figure = plt.figure(figsize=figsize, dpi=dpi)
+            ax = figure.add_subplot(1, 1, 1)
+            color_coef = '#000000'
+            color = '#ff0000'
+
+        self.sort('rad')
+
+        obj = self
+        for i in range(cm_parent):
+            obj = obj.parent
+        c = obj.c
+        m = obj.m
+        rad = self.table['rad'].to_numpy(dtype=float)
+        sif = self.table['sif'].to_numpy(dtype=float)
+        initial_length = self.table['rad'].min()
+        crack_spec = OneCycle(rad, sif, c, m, interpol=interpol)
+        cycle_spec = crack_spec.get_number_cycle(initial_length)
+
+        # новые скорости
+        cm_text = 'C = {:.4e}; m = {:.4f}'.format(c, m)
+        ax.plot(np.arange(cycle_spec), crack_spec.arr_length_crack,
+                label='cm_text')
+        
+        # стандартные скорости
+        for c_ct, m_ct, name in self.specimen.get_cge_ct():
+            cr = OneCycle(rad, sif, c_ct, m_ct, interpol=interpol)
+            cycle = cr.get_number_cycle(initial_length)
+            ax.plot(np.arange(cycle), cr.arr_length_crack,
+                    label='CT '+name)
+
+        # расстояние между соседними точками
+        inc = self.table['rad'].diff().to_numpy()[1:]
+        # средние скорости для этих отрезков
+        d = self.table['d'].to_numpy()
+        d = np.average(np.vstack((d[:-1], d[1:])), axis=0)
+        # число циклов для этих отрезков и кумулятивный массив
+        n_inc = inc / d
+        n = n_inc.cumsum()
+        # расстояние и циклы от нуля
+        r = self.table['rad'].to_numpy()
+        n = np.concatenate(([.0], n))
+        ax.scatter(n, r, label='Эксперимент')
+
+        ax.grid()
+        ax.set_xlabel('Число циклов')
+        ax.set_ylabel('Длина трещины')
+        ax.set_title()
         return ax
 
     def drop_dev_max(self, part_top=0.025, part_bottom=0.025):
@@ -280,7 +346,7 @@ class SIF2:
                 color = '#ff0000'
                 label = 'Эксперимент'
         else:
-            figure = plt.figure(figsize=(15, 10), dpi=200)
+            figure = plt.figure(figsize=figsize, dpi=dpi)
             ax = figure.add_subplot(1, 1, 1)
             color = '#ff0000'
             label = 'Эксперимент'
@@ -366,8 +432,8 @@ class SIF2:
                   color_rate=True, plot_specimen=True,
                   dir_theta_null='S', comment_num_points=False,
                   plot_curve_front_data=True):
-        fig = plt.figure(figsize=(15, 15))
-        ax = fig.add_subplot(projection='polar')
+        figure = plt.figure(figsize=(10, 10), dpi=dpi)
+        ax = figure.add_subplot(projection='polar')
         ax.set_theta_zero_location(dir_theta_null)
         ax.set_theta_direction(1)
         ax.grid(False)
@@ -389,7 +455,7 @@ class SIF2:
             norm = mpl.colors.BoundaryNorm(ticks, SIF2.CMAP.N)
             sc = ax.scatter(np.deg2rad(df['ang']), df['rad'], c=df['d'],
                             cmap=SIF2.CMAP, norm=norm)
-            cbar = fig.colorbar(sc, ax=ax, ticks=ticks, norm=norm, shrink=0.5,
+            cbar = figure.colorbar(sc, ax=ax, ticks=ticks, norm=norm, shrink=0.5,
                                 orientation='horizontal', pad=0.03)
             cbar.set_ticks(ticks)
             cbar.set_ticklabels(list(map('{:.3e}'.format, ticks)))
