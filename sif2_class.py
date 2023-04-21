@@ -219,7 +219,8 @@ class SIF2:
         ax.tick_params(axis='both', which='both', labelsize=20)
         return ax
 
-    def plot_length_of_cycle(self, cm_parent=0, plot_ct=True, ax=None, interpol=1):
+    def plot_length_of_cycle(self, cm_parent=0, plot_ct=True, ax=None, interpol=1,
+                             group=None):
         """Зависимость длины трещины от количества циклов по фракт данным и по
         вычисленным C и m
         Parameter:
@@ -228,14 +229,17 @@ class SIF2:
         if ax:
             if isinstance(group, GroupSIF):
                 name, id_ = group.find(self)
-                color_coef = COLORS[id_]
+                label = '{} {}'.format(id_, name)
+                color_coef = '#000000'
                 color = COLORS[id_]
             else:
+                label = 'Эксперимент'
                 color_coef = '#000000'
                 color = '#ff0000'
         else:
-            figure = plt.figure(figsize=figsize, dpi=dpi)
+            figure = plt.figure(figsize=(6, 4), dpi=dpi)
             ax = figure.add_subplot(1, 1, 1)
+            label = 'Эксперимент'
             color_coef = '#000000'
             color = '#ff0000'
 
@@ -255,14 +259,15 @@ class SIF2:
         # новые скорости
         cm_text = 'C = {:.4e}; m = {:.4f}'.format(c, m)
         ax.plot(np.arange(cycle_spec), crack_spec.arr_length_crack,
-                label='cm_text')
+                label=cm_text, color=color_coef)
         
         # стандартные скорости
-        for c_ct, m_ct, name in self.specimen.get_cge_ct():
-            cr = OneCycle(rad, sif, c_ct, m_ct, interpol=interpol)
-            cycle = cr.get_number_cycle(initial_length)
-            ax.plot(np.arange(cycle), cr.arr_length_crack,
-                    label='CT '+name)
+        if plot_ct:
+            for c_ct, m_ct, name in self.specimen.get_cge_ct():
+                cr = OneCycle(rad, sif, c_ct, m_ct, interpol=interpol)
+                cycle = cr.get_number_cycle(initial_length)
+                ax.plot(np.arange(cycle), cr.arr_length_crack,
+                        label='CT '+name)
 
         # расстояние между соседними точками
         inc = self.table['rad'].diff().to_numpy()[1:]
@@ -275,12 +280,14 @@ class SIF2:
         # расстояние и циклы от нуля
         r = self.table['rad'].to_numpy()
         n = np.concatenate(([.0], n))
-        ax.scatter(n, r, label='Эксперимент')
+        ax.scatter(n, r, label=label, color=color)
 
-        ax.grid()
+        ax.grid(which='both', alpha=0.4)
+        ax.legend()
         ax.set_xlabel('Число циклов')
         ax.set_ylabel('Длина трещины')
-        ax.set_title()
+        ax.set_xlim(left=0)
+        ax.set_ylim(bottom=initial_length)
         return ax
 
     def drop_dev_max(self, part_top=0.025, part_bottom=0.025):

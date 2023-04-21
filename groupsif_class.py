@@ -64,6 +64,14 @@ class GroupSIF:
                 ax.plot(xline, y, label='CT '+name)
         return ax
 
+    def plot_length_of_cycle(self, cm_parent=0, plot_ct=True, interpol=1):
+        for pack in self:
+            figure = plt.figure(figsize=(6, 4), dpi=300)
+            ax = figure.add_subplot(1, 1, 1)
+            sif = pack['sif']
+            ax = sif.plot_length_of_cycle(cm_parent=cm_parent, plot_ct=plot_ct,
+                    ax=ax, interpol=interpol, group=self)
+
     def solve_cycle(self, display_table=True):
         for pack in self:
             pack['sif'].solve_cycle(display_table=display_table)

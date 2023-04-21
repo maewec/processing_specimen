@@ -147,6 +147,7 @@ class Specimen:
                 alpha_curve - прозрачность кривых
                 only_min_max_curve - только минимальная и максимальная кривые
                 axis_switch - 'off', 'on' - выключение осей и шкал
+                sif_plot_general - True, False - раскраска КИН общая по всем фронтам или раздельная
                 """
 
         cont_dict = self.__cont_dict(cont)
@@ -155,8 +156,24 @@ class Specimen:
         ax = fig.add_subplot(projection='polar')
 
         rad_max = 0
-        
+        kin_min = 10000
+        kin_max = 0
         if cont:
+            try:
+                sif_plot_general = settings['sif_plot_general']
+            except KeyError:
+                sif_plot_general = False
+            if sif_plot_general:
+                for name in self.table:
+                    tab = self.table[name]
+                    kin = (np.array(tab[cont])[:-1] + np.array(tab[cont])[1:])/2
+                    kin_min0 = kin.min()
+                    kin_max0 = kin.max()
+                    if kin_min0 < kin_min:
+                        kin_min = kin_min0
+                    if kin_max0 > kin_max:
+                        kin_max = kin_max0
+
             for name in self.table:
                 tab = self.table[name]
                 deg = np.array(np.deg2rad(tab.index))
@@ -169,7 +186,10 @@ class Specimen:
                 points = np.array([deg, rad]).T.reshape(-1, 1, 2)
                 segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-                norm = plt.Normalize(kin.min(), kin.max())
+                if sif_plot_general:
+                    norm = plt.Normalize(kin_min, kin_max)
+                else:
+                    norm = plt.Normalize(kin.min(), kin.max())
                 lc = LineCollection(segments, cmap='jet', norm=norm)
                 lc.set_array(kin)
                 lc.set_linewidth(2)
