@@ -87,13 +87,14 @@ class Specimen:
         else:
             Exception('Нет фронта '+name)
 
-    def plot_all_fronts(self, cont, return_obj=False):
+    def plot_all_fronts(self, cont, ax=None):
         """
         Parameters:
             cont - str, dict - название контура либо словарь с названиями трещин и контурами
             """
-        if not return_obj:
-            plt.figure(figsize=(15, 10))
+        if not ax:
+            figure = plt.figure(figsize=(6, 4), dpi=300)
+            ax = figure.add_subplot(1, 1, 1)
 
         cont_dict = self.__cont_dict(cont)
 
@@ -101,10 +102,9 @@ class Specimen:
             cont = cont_dict[name]
             ax = self.table[name][cont].plot(label=name)
 
-        if not return_obj:
-            plt.legend()
-        else:
-            return ax
+        if not ax:
+            ax.legend()
+        return ax
 
     def __cont_dict(self, cont):
         if not isinstance(cont, dict):
