@@ -236,9 +236,17 @@ class GroupSIF:
             raise StopIteration
 
     def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
-                  plot_specimen=True, plot_parent=False,
+                  plot_rad_obr=True, plot_rad_def=False, plot_parent=False,
                   dir_theta_null='S', comment_num_points=False,
-                  plot_curve_front_data=True):
+                  plot_curve_front_data=True, plot_curve_front_data_spec=True, settings=dict()):
+        """
+        Parameter:
+            settings - словарь с настройками:
+                color_curve - цвет кривых
+                alpha_curve - прозрачность кривых
+                only_min_max_curve - только минимальная и максимальная кривые
+                axis_switch - 'off', 'on' - выключение осей и шкал
+        """
         fig = plt.figure(figsize=(15,15))
         ax = fig.add_subplot(projection='polar')
         ax.set_theta_zero_location(dir_theta_null)
@@ -266,21 +274,46 @@ class GroupSIF:
         ax.scatter([0], [0], color='r', marker='+', linewidth=10)
 
         spec = pack['sif'].specimen
-        if plot_specimen:
-            if spec.rad_obr:
-                rad, deg360 = spec._Specimen__sdvig(spec.rad_obr)
-                ax.plot(deg360, rad, 'k')
-                rad_obr = spec.rad_obr
-            if spec.rad_def:
-                rad, deg360 = spec._Specimen__sdvig(spec.rad_def)
-                ax.plot(deg360, rad, 'k')
+
+        # печать образца и дефекта
+        if spec.rad_obr and plot_rad_obr:
+            rad, deg360 = spec._Specimen__sdvig(spec.rad_obr)
+            ax.plot(deg360, rad, 'k')
+        ax.set_ylim(0, spec.rad_obr+0.5)
+        if spec.rad_def and plot_rad_def:
+            rad, deg360 = spec._Specimen__sdvig(spec.rad_def)
+            ax.plot(deg360, rad, 'k')
+
+        # печать кривых для образца
+        if plot_curve_front_data_spec:
+            if spec.curve_front_data:
+                try:
+                    color = settings['color_curve']
+                except KeyError:
+                    color='k'
+                try:
+                    alpha = settings['alpha_curve']
+                except KeyError:
+                    alpha = 0.3
+                try:
+                    only_min_max = settings['only_min_max_curve']
+                except KeyError:
+                    only_min_max = True
+                ax = spec.curve_front_data.plot_ax_initial(ax, color=color,
+                        alpha=alpha, only_min_max=only_min_max)
+
+        try:
+            axis_switch =  settings['axis_switch']
+            ax.axis(axis_switch)
+        except:
+            pass
 
         ax.set_xlim(np.deg2rad(ang0), np.deg2rad(ang1))
         if rad1 == 'max':
             rad1 = df['rad'].max()
-            if plot_specimen:
-                if rad_obr > rad1:
-                    rad1 = rad_obr
+            if plot_rad_obr:
+                if spec.rad_obr > rad1:
+                    rad1 = spec.rad_obr
         ax.set_ylim(rad0, rad1*1.1)
 
         ax.legend()
