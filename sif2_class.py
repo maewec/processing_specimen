@@ -388,7 +388,7 @@ class SIF2:
         ax.legend(fontsize=20)
         ax.grid(which='both', alpha=0.4)
         ax.set_xlabel('Циклы', fontsize=20)
-        ax.set_ylabel('Длина, мм', fontsize=20)
+        ax.set_ylabel('Радиус, мм', fontsize=20)
         ax.tick_params(axis='both', which='both', labelsize=20)
         return ax
 

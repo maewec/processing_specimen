@@ -136,7 +136,7 @@ class Specimen:
         return obj_copy
 
     def plot_geom_front(self, cont=None, plot_rad_obr=True, plot_rad_def=True,
-                        dir_theta_null='S', plot_curve_front_data=True,
+                        dir_theta_null='S', plot_curve_front_data=True, ax=None,
                         save_plot_with_image=None, settings=dict()):
         """Печать геометрии фронтов трещины с нанесенными значениями КИН
         Parameter:
@@ -149,12 +149,12 @@ class Specimen:
                 axis_switch - 'off', 'on' - выключение осей и шкал
                 sif_plot_general - True, False - раскраска КИН общая по всем фронтам или раздельная
                 """
-
         cont_dict = self.__cont_dict(cont)
-        
-        fig = plt.figure(figsize=(10, 10), dpi=250)
-        ax = fig.add_subplot(projection='polar')
 
+        if not ax:
+            figure = plt.figure(figsize=(10, 10), dpi=300)
+            ax = figure.add_subplot(projection='polar')
+        
         rad_max = 0
         kin_min = 10000
         kin_max = 0
@@ -259,7 +259,9 @@ class Specimen:
 
         # если есть объект с изображением поверхности излома, то сохранить его
         if isinstance(save_plot_with_image, ImageSpecimen):
-            save_plot_with_image.save_fig(fig)
+            save_plot_with_image.save_fig(figure)
+        
+        return ax
 
     def __sdvig(self, rad):
         div = 100
