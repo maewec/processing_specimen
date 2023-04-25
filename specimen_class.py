@@ -87,7 +87,7 @@ class Specimen:
         else:
             Exception('Нет фронта '+name)
 
-    def plot_all_fronts(self, cont, ax=None):
+    def plot_all_fronts(self, cont, ax=None, mpa2kgs=False):
         """
         Parameters:
             cont - str, dict - название контура либо словарь с названиями трещин и контурами
@@ -100,7 +100,16 @@ class Specimen:
 
         for name in self.table:
             cont = cont_dict[name]
-            ax = self.table[name][cont].plot(label=name)
+            if mpa2kgs:
+                ax = (self.table[name][cont] / 9.8).plot(label=name)
+            else:
+                ax = self.table[name][cont].plot(label=name)
+
+        ax.set_xlabel('Координата по окружности, °')
+        if mpa2kgs:
+            ax.set_ylabel('$размах\ КИН,\ кгс/мм^{3/2}$')
+        else:
+            ax.set_ylabel('КИН, $МПа \sqrt{мм}$')
 
         if not ax:
             ax.legend()

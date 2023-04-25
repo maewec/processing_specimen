@@ -2,6 +2,7 @@ from ._import import *
 from .groupsif_class import GroupSIF
 
 figsize = (15, 10)
+figsize2 = (6, 4)
 dpi = 300
 
 class SIF2:
@@ -141,7 +142,8 @@ class SIF2:
         self._yline_sko = {i: self.c_sko[i] * self._xline ** self.m for i in self.c_sko}
 
     def plot_cge(self, plot_coef=True, plot_cge_ct=True, ax=None, marker='o',
-                 comment_num_points=False, group=None, sko=False, print_text_coef=True):
+                 comment_num_points=False, group=None, sko=False, print_text_coef=True,
+                 print_coef_in_legend=True):
         """
         Parameter:
         sko - включение отображения СКО, True или список степеней [-3, -1, 1, 4]
@@ -149,32 +151,34 @@ class SIF2:
         if ax:
             if isinstance(group, GroupSIF):
                 name, id_ = group.find(self)
-                label = '{} {}'.format(id_, name)
-                label2 = 'Аппроксимация ' + label
+                label = '№{} {}'.format(id_, name)
+                label2 = label + '; '
                 color_coef = COLORS[id_]
                 color = COLORS[id_]
             else:
                 color_coef = '#000000'
                 color = '#ff0000'
-                label = 'Эксперимент'
-                label2 = 'Аппроксимация'
+                label = 'Данные'
+                label2 = ''
         else:
-            figure = plt.figure(figsize=figsize, dpi=dpi)
+            figure = plt.figure(figsize=figsize2, dpi=dpi)
             ax = figure.add_subplot(1, 1, 1)
             color_coef = '#000000'
             color = '#ff0000'
-            label = 'Эксперимент'
-            label2 = 'Аппроксимация'
+            label = 'Данные'
+            label2 = ''
 
         df = self.table
         x = df['sif'].to_numpy(dtype=float)
         y = df['d'].to_numpy(dtype=float)
-        ax.plot(x, y, marker=marker, linestyle='', color=color, label=label)
+        ax.plot(x, y, marker=marker, linestyle='', color=color)
 
         if comment_num_points:
             for index, row in df.iterrows():
                 ax.text(row['sif'], row['d'], str(index))
 
+        if print_coef_in_legend:
+            label2 = '{}C={:.4e}; m={:.4f}'.format(label2, self.c, self.m)
         if plot_coef:
             ax.plot(self._xline, self._yline, color=color_coef,
                     label=label2)
@@ -183,7 +187,7 @@ class SIF2:
             for cge in self.specimen.get_cge_ct():
                 c, m, name = cge
                 y = c * self._xline ** m
-                ax.plot(self._xline, y, label='CT '+name)
+                ax.plot(self._xline, y, label='ВР '+name)
 
         if sko:
             if isinstance(sko, bool):
@@ -207,16 +211,24 @@ class SIF2:
                 t = '$dl/dN = {} \cdot \Delta K ^{{{:.4f}}}$\n'.format(c_text, self.m)
                 text += t
             bbox = dict(boxstyle="round", fc='white', alpha=0.4)
-            ax.text(0.95, 0.05, text[:-1], fontsize=20, ha='right', va='bottom', transform=ax.transAxes, bbox=bbox)
+            ax.text(0.95, 0.05, text[:-1], ha='right', va='bottom', transform=ax.transAxes, bbox=bbox)
 
 
-        ax.legend(fontsize=20)
+        ax.legend()
         ax.grid(which='both', alpha=0.4)
-        ax.set_xlabel('$КИН, кгс/мм^{3/2}$', fontsize=20)
-        ax.set_ylabel('$dl/dN, мм/цикл$', fontsize=20)
+        ax.set_xlabel('$размах\ КИН,\ кгс/мм^{3/2}$')
+        ax.set_ylabel('$dl/dN,\ мм/цикл$')
         ax.set_xscale('log')
         ax.set_yscale('log')
-        ax.tick_params(axis='both', which='both', labelsize=20)
+        ax.tick_params(axis='both', which='both')
+
+        if not isinstance(group, GroupSIF):
+            xmin, xmax = ax.set_xlim()
+            xmin = int(xmin // 10 * 10)
+            xmax = int(xmax // 10 * 10 +10)
+            xticks = np.arange(xmin, xmax+1, 10)
+            ax.set_xticks(xticks)
+            ax.set_xticklabels(xticks, rotation=45)
         return ax
 
     def plot_length_of_cycle(self, cm_parent=0, plot_ct=True, ax=None, interpol=1,
@@ -267,7 +279,7 @@ class SIF2:
                 cr = OneCycle(rad, sif, c_ct, m_ct, interpol=interpol)
                 cycle = cr.get_number_cycle(initial_length)
                 ax.plot(np.arange(cycle), cr.arr_length_crack,
-                        label='CT '+name)
+                        label='ВР '+name)
 
         # расстояние между соседними точками
         inc = self.table['rad'].diff().to_numpy()[1:]

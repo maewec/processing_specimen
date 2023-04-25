@@ -1,5 +1,7 @@
 from ._import import *
 
+linestyles = ('dotted', 'dashed', 'dashdot',
+             (0, (5, 10)), (5, (10, 3)))
 
 class GroupSIF:
     def __init__(self):
@@ -48,7 +50,7 @@ class GroupSIF:
             pack['sif'].solve_cge()
 
     def plot_cge(self, plot_coef=True, plot_cge_ct=True, comment_num_points=False):
-        figure = plt.figure(figsize=(15, 10), dpi=200)
+        figure = plt.figure(figsize=(6, 4), dpi=300)
         ax = figure.add_subplot(1, 1, 1)
         for pack in self:
             pack['sif'].plot_cge(plot_coef=plot_coef, plot_cge_ct=False, ax=ax,
@@ -58,10 +60,20 @@ class GroupSIF:
         xline = np.linspace(*ax.set_xlim(), 100)
 
         if plot_cge_ct:
+            k = 0
             for cge in pack['sif'].specimen.get_cge_ct():
                 c, m, name = cge
                 y = c * xline ** m
-                ax.plot(xline, y, label='CT '+name)
+                ax.plot(xline, y, color='k', linestyle=linestyles[k], label='ВР '+name)
+                k += 1
+        ax.legend()
+
+        xmin, xmax = ax.set_xlim()
+        xmin = int(xmin // 10 * 10)
+        xmax = int(xmax // 10 * 10 +10)
+        xticks = np.arange(xmin, xmax+1, 10)
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xticks, rotation=45)
         return ax
 
     def plot_length_of_cycle(self, cm_parent=0, plot_ct=True, interpol=1):
@@ -247,7 +259,7 @@ class GroupSIF:
                 only_min_max_curve - только минимальная и максимальная кривые
                 axis_switch - 'off', 'on' - выключение осей и шкал
         """
-        fig = plt.figure(figsize=(15,15))
+        fig = plt.figure(figsize=(10,10), dpi=300)
         ax = fig.add_subplot(projection='polar')
         ax.set_theta_zero_location(dir_theta_null)
         ax.set_theta_direction(1)
