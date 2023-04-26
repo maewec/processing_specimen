@@ -5,6 +5,9 @@ figsize = (15, 10)
 figsize2 = (6, 4)
 dpi = 300
 
+linestyles = ('dotted', 'dashed', 'dashdot',
+             (0, (5, 10)), (5, (10, 3)))
+
 class SIF2:
     """
     КИН по облаку точек с уникальными радиусами и углами
@@ -143,7 +146,7 @@ class SIF2:
 
     def plot_cge(self, plot_coef=True, plot_cge_ct=True, ax=None, marker='o',
                  comment_num_points=False, group=None, sko=False, print_text_coef=True,
-                 print_coef_in_legend=True):
+                 print_coef_in_legend=True, markersize=5):
         """
         Parameter:
         sko - включение отображения СКО, True или список степеней [-3, -1, 1, 4]
@@ -171,7 +174,7 @@ class SIF2:
         df = self.table
         x = df['sif'].to_numpy(dtype=float)
         y = df['d'].to_numpy(dtype=float)
-        ax.plot(x, y, marker=marker, linestyle='', color=color)
+        ax.plot(x, y, marker=marker, linestyle='', color=color, zorder=0, markersize=markersize)
 
         if comment_num_points:
             for index, row in df.iterrows():
@@ -181,13 +184,15 @@ class SIF2:
             label2 = '{}C={:.4e}; m={:.4f}'.format(label2, self.c, self.m)
         if plot_coef:
             ax.plot(self._xline, self._yline, color=color_coef,
-                    label=label2)
+                    label=label2, zorder=10)
 
         if plot_cge_ct:
+            k = 0
             for cge in self.specimen.get_cge_ct():
                 c, m, name = cge
                 y = c * self._xline ** m
-                ax.plot(self._xline, y, label='ВР '+name)
+                ax.plot(self._xline, y, label='ВР '+name, color='k', linestyle=linestyles[k], zorder=9)
+                k += 1
 
         if sko:
             if isinstance(sko, bool):
@@ -237,6 +242,7 @@ class SIF2:
         вычисленным C и m
         Parameter:
             cm_parent - 0 - c и m данного экземпляра, 1 - экземпляра родителя и тд
+                или объект SIF2 от которого берутся c и m
         """
         if ax:
             if isinstance(group, GroupSIF):
@@ -244,6 +250,7 @@ class SIF2:
                 label = '{} {}'.format(id_, name)
                 color_coef = '#000000'
                 color = COLORS[id_]
+                print(label, end='')
             else:
                 label = 'Эксперимент'
                 color_coef = '#000000'
@@ -257,9 +264,12 @@ class SIF2:
 
         self.sort('rad')
 
-        obj = self
-        for i in range(cm_parent):
-            obj = obj.parent
+        if isinstance(cm_parent, SIF2):
+            obj = cm_parent
+        else:
+            obj = self
+            for i in range(cm_parent):
+                obj = obj.parent
         c = obj.c
         m = obj.m
         rad = self.table['rad'].to_numpy(dtype=float)
@@ -297,9 +307,11 @@ class SIF2:
         ax.grid(which='both', alpha=0.4)
         ax.legend()
         ax.set_xlabel('Число циклов')
-        ax.set_ylabel('Длина трещины')
+        ax.set_ylabel('Длина трещины, мм')
         ax.set_xlim(left=0)
         ax.set_ylim(bottom=initial_length)
+
+        print(cycle_spec)
         return ax
 
     def drop_dev_max(self, part_top=0.025, part_bottom=0.025):

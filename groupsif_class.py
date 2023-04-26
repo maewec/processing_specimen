@@ -49,13 +49,13 @@ class GroupSIF:
             print('{} {}'.format(pack['id'], pack['name']))
             pack['sif'].solve_cge()
 
-    def plot_cge(self, plot_coef=True, plot_cge_ct=True, comment_num_points=False):
+    def plot_cge(self, plot_coef=True, plot_cge_ct=True, comment_num_points=False, markersize=5):
         figure = plt.figure(figsize=(6, 4), dpi=300)
         ax = figure.add_subplot(1, 1, 1)
         for pack in self:
             pack['sif'].plot_cge(plot_coef=plot_coef, plot_cge_ct=False, ax=ax,
                                  marker=pack['marker'], comment_num_points=comment_num_points,
-                                 group=self, print_text_coef=False)
+                                 group=self, print_text_coef=False, markersize=markersize)
 
         xline = np.linspace(*ax.set_xlim(), 100)
 
@@ -64,7 +64,7 @@ class GroupSIF:
             for cge in pack['sif'].specimen.get_cge_ct():
                 c, m, name = cge
                 y = c * xline ** m
-                ax.plot(xline, y, color='k', linestyle=linestyles[k], label='ВР '+name)
+                ax.plot(xline, y, color='k', linestyle=linestyles[k], label='ВР '+name, zorder=9)
                 k += 1
         ax.legend()
 
@@ -77,6 +77,12 @@ class GroupSIF:
         return ax
 
     def plot_length_of_cycle(self, cm_parent=0, plot_ct=True, interpol=1):
+        """Зависимость длины трещины от количества циклов по фракт данным и по
+        вычисленным C и m
+        Parameter:
+            cm_parent - 0 - c и m данного экземпляра, 1 - экземпляра родителя и тд
+                или объект SIF2 от которого берутся c и m
+        """
         for pack in self:
             figure = plt.figure(figsize=(6, 4), dpi=300)
             ax = figure.add_subplot(1, 1, 1)
