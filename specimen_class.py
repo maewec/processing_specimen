@@ -158,7 +158,6 @@ class Specimen:
                 axis_switch - 'off', 'on' - выключение осей и шкал
                 sif_plot_general - True, False - раскраска КИН общая по всем фронтам или раздельная
                 """
-        cont_dict = self.__cont_dict(cont)
 
         if not ax:
             figure = plt.figure(figsize=(10, 10), dpi=300)
@@ -168,12 +167,14 @@ class Specimen:
         kin_min = 10000
         kin_max = 0
         if cont:
+            cont_dict = self.__cont_dict(cont)
             try:
                 sif_plot_general = settings['sif_plot_general']
             except KeyError:
                 sif_plot_general = False
             if sif_plot_general:
                 for name in self.table:
+                    cont = cont_dict[name]
                     tab = self.table[name]
                     kin = (np.array(tab[cont])[:-1] + np.array(tab[cont])[1:])/2
                     kin_min0 = kin.min()
