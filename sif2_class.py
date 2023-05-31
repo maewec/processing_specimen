@@ -80,6 +80,18 @@ class SIF2:
 
         self.sort()
 
+    def select_by_curve(self, rad, ang=0, marker='o'):
+        obj_copy = copy.deepcopy(self)
+
+        curve = self.curve_front_data.search_curve(rad, ang)
+        for index, row in obj_copy.table.iterrows():
+            if row['rad'] > curve.rad_from_ang(row['ang']):
+                obj_copy.table = obj_copy.table.drop(index=index)
+
+        obj_copy.parent = self
+        obj_copy.define_minmax_curve()
+        return obj_copy
+
     def select_group(self, ang0=0, ang1=360, rad0=0, rad1=100,
                      marker='o'):
         obj_copy = copy.deepcopy(self)
