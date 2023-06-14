@@ -95,9 +95,10 @@ class GroupSIF:
             pack['sif'].solve_cycle(display_table=display_table)
 
     def plot_cycle(self, reverse_rate=False, sdvig_r=False, comment_num_points=False,
-                       plot_total_cycle=True):
-        figure = plt.figure(figsize=(15, 10), dpi=200)
-        ax = figure.add_subplot(1, 1, 1)
+                       plot_total_cycle=True, ax=None):
+        if ax==None:
+            figure = plt.figure(figsize=(15, 10), dpi=200)
+            ax = figure.add_subplot(1, 1, 1)
         for pack in self:
             pack['sif'].plot_cycle(reverse_rate=reverse_rate, sdvig_r=sdvig_r, ax=ax,
                                    marker=pack['marker'], plot_total_cycle=plot_total_cycle,
@@ -256,7 +257,8 @@ class GroupSIF:
     def plot_geom(self, ang0=0, ang1=360, rad0=0, rad1='max',
                   plot_rad_obr=True, plot_rad_def=False, plot_parent=False,
                   dir_theta_null='S', comment_num_points=False,
-                  plot_curve_front_data=True, plot_curve_front_data_spec=True, settings=dict()):
+                  plot_curve_front_data=True, plot_curve_front_data_spec=True, settings=dict(),
+                  ax=None):
         """
         Parameter:
             settings - словарь с настройками:
@@ -265,18 +267,20 @@ class GroupSIF:
                 only_min_max_curve - только минимальная и максимальная кривые
                 axis_switch - 'off', 'on' - выключение осей и шкал
         """
-        fig = plt.figure(figsize=(10,10), dpi=300)
-        ax = fig.add_subplot(projection='polar')
-        ax.set_theta_zero_location(dir_theta_null)
-        ax.set_theta_direction(1)
-        ax.grid(False)
+
+        if ax==None:
+            fig = plt.figure(figsize=(10,10), dpi=300)
+            ax = fig.add_subplot(projection='polar')
+            ax.set_theta_zero_location(dir_theta_null)
+            ax.set_theta_direction(1)
+            ax.grid(False)
 
         for pack in self:
             sif = pack['sif']
             df = sif.table
-            sc = ax.scatter(np.deg2rad(df['ang']), df['rad'],
-                            color=COLORS[pack['id']], marker=pack['marker'], zorder=10,
-                            label='{} {}'.format(pack['id'], pack['name']))
+            sc = ax.plot(np.deg2rad(df['ang']), df['rad'], linestyle='',
+                         color=COLORS[pack['id']], marker=pack['marker'], zorder=10,
+                         label='{} {}'.format(pack['id'], pack['name']))
 
             if comment_num_points:
                 for index, row in df.iterrows():
