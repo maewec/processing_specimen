@@ -157,6 +157,7 @@ class Specimen:
                 only_min_max_curve - только минимальная и максимальная кривые
                 axis_switch - 'off', 'on' - выключение осей и шкал
                 sif_plot_general - True, False - раскраска КИН общая по всем фронтам или раздельная
+                cmap - 'jet' another - цветовая схема фронтов
                 """
 
         if not ax:
@@ -200,7 +201,11 @@ class Specimen:
                     norm = plt.Normalize(kin_min, kin_max)
                 else:
                     norm = plt.Normalize(kin.min(), kin.max())
-                lc = LineCollection(segments, cmap='jet', norm=norm)
+                try:
+                    cmap = settings['cmap']
+                except KeyError:
+                    cmap='jet'
+                lc = LineCollection(segments, cmap=cmap, norm=norm)
                 lc.set_array(kin)
                 lc.set_linewidth(2)
                 line = ax.add_collection(lc)
