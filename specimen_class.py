@@ -409,6 +409,55 @@ class Specimen:
         return self.sif_cloud
 
 
+class Soi(Specimen):
+    def __init__(self, list_fronts=None, list_names=None, reverse_ang=False,
+                 force=None, r_asymmetry=None, temp=None, name=''):
+
+        self.list_fronts = list_fronts
+        if list_fronts:
+            if list_names is None:
+                self.list_names = [x for x in range(len(self.list_fronts))]
+            else:
+                self.list_names = list_names
+            if isinstance(reverse_ang, bool):
+                self.reverse_ang = []
+                for i in range(len(list_fronts)):
+                    self.reverse_ang.append(reverse_ang)
+            else:
+                self.reverse_ang = reverse_ang
+        else:
+            self.list_names = list_names
+
+        self.table = dict()
+        if list_fronts:
+            for i in range(len(list_fronts)):
+                self.table[self.list_names[i]] = self.__read_file(i)
+
+        self.force = force
+        self.r_asymmetry = r_asymmetry
+        self.temp = temp
+        self.name = name
+
+        self.dir_sif = list()
+        self.nominal_table = None
+        self.cge_ct = list()
+        self.sif_cloud = None
+
+    def __read_file(self, i):
+        path = self.list_fronts[i]
+        names = Specimen.NAMES_COLUMNS
+        index_col = Specimen.NAME_INDEX
+        drop = Specimen.NAME_DROP
+        df = pd.read_table(path, delim_whitespace=True, names=names,
+                           index_col=index_col).drop(columns=drop)
+        if self.reverse_ang[i]:
+            df.index *= -1
+            df = df.sort_index()
+        # нормирую угол от 0
+        if df.index.min() < 0:
+        df.index = df.index + np.abs(df.index.min())
+        return df
+
 
 class UniteSpecimen(Specimen):
     def __init__(self, r_asymmetry=None):
