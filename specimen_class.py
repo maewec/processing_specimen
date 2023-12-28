@@ -15,6 +15,8 @@ class Specimen:
             reverse_ang - разворачивать ли фронты по оси симметрии 0 - 180,
               можно задать список для каждого фронта"""
 
+        self.type_specimen = 'special'
+
         self.list_fronts = list_fronts
         if list_fronts:
             if list_names is None:
@@ -96,7 +98,7 @@ class Specimen:
             figure = plt.figure(figsize=(6, 4), dpi=300)
             ax = figure.add_subplot(1, 1, 1)
 
-        cont_dict = self.__cont_dict(cont)
+        cont_dict = self._cont_dict(cont)
 
         for name in self.table:
             cont = cont_dict[name]
@@ -115,7 +117,7 @@ class Specimen:
             ax.legend()
         return ax
 
-    def __cont_dict(self, cont):
+    def _cont_dict(self, cont):
         if not isinstance(cont, dict):
             cont_dict = {}
             for name in self.table:
@@ -168,7 +170,7 @@ class Specimen:
         kin_min = 10000
         kin_max = 0
         if cont:
-            cont_dict = self.__cont_dict(cont)
+            cont_dict = self._cont_dict(cont)
             try:
                 sif_plot_general = settings['sif_plot_general']
             except KeyError:
@@ -220,7 +222,7 @@ class Specimen:
         if self.rad_obr and plot_rad_obr:
             rad, deg360 = self.__sdvig(self.rad_obr)
             ax.plot(deg360, rad, 'k')
-        ax.set_ylim(0, self.rad_obr+0.5)
+            ax.set_ylim(0, self.rad_obr+0.5)
         if self.rad_def and plot_rad_def:
             rad, deg360 = self.__sdvig(self.rad_def)
             ax.plot(deg360, rad, 'k')
@@ -331,7 +333,7 @@ class Specimen:
 
     def create_sif(self, angle, contour, for_dir_sif=True, print_decart_coord=False):
 
-        cont_dict = self.__cont_dict(contour)
+        cont_dict = self._cont_dict(contour)
 
         direct_sif = pd.DataFrame()
         for name in self.table:
@@ -411,7 +413,12 @@ class Specimen:
 
 class Soi(Specimen):
     def __init__(self, list_fronts=None, list_names=None, reverse_ang=False,
+                 width=None, thickness=None,
                  force=None, r_asymmetry=None, temp=None, name=''):
+
+        self.type_specimen = 'soi'
+        self.width = width
+        self.thickness = thickness
 
         self.list_fronts = list_fronts
         if list_fronts:
@@ -443,6 +450,10 @@ class Soi(Specimen):
         self.cge_ct = list()
         self.sif_cloud = None
 
+        # заглушки для Specimen
+        self.rad_obr = None
+        self.rad_def = None
+
     def __read_file(self, i):
         path = self.list_fronts[i]
         names = Specimen.NAMES_COLUMNS
@@ -455,12 +466,127 @@ class Soi(Specimen):
             df = df.sort_index()
         # нормирую угол от 0
         if df.index.min() < 0:
-        df.index = df.index + np.abs(df.index.min())
+            df.index = df.index + np.abs(df.index.min())
         return df
+
+    def plot_geom_front(self, cont=None, ax=None, settings=dict(), save_plot_with_image=None):
+        """Печать геометрии фронтов трещины с нанесенными значениями КИН
+        Parameter:
+            settings - словарь с настройками:
+                color_sif_cloud - цвет точек
+                marker_sif_cloud - маркер точек
+                color_curve - цвет кривых
+                alpha_curve - прозрачность кривых
+                only_min_max_curve - только минимальная и максимальная кривые
+                axis_switch - 'off', 'on' - выключение осей и шкал
+                sif_plot_general - True, False - раскраска КИН общая по всем фронтам или раздельная
+                cmap - 'jet' another - цветовая схема фронтов
+                """
+
+        if not ax:
+            figure = plt.figure(figsize=(10, 10), dpi=300)
+            ax = figure.add_subplot()
+            ax.axis('scaled')
+        
+        rad_max = 0
+        kin_min = 10000
+        kin_max = 0
+        if cont:
+            cont_dict = self._cont_dict(cont)
+            try:
+                sif_plot_general = settings['sif_plot_general']
+            except KeyError:
+                sif_plot_general = False
+            if sif_plot_general:
+                for name in self.table:
+                    cont = cont_dict[name]
+                    tab = self.table[name]
+                    kin = (np.array(tab[cont])[:-1] + np.array(tab[cont])[1:])/2
+                    kin_min0 = kin.min()
+                    kin_max0 = kin.max()
+                    if kin_min0 < kin_min:
+                        kin_min = kin_min0
+                    if kin_max0 > kin_max:
+                        kin_max = kin_max0
+
+            for name in self.table:
+                tab = self.table[name]
+                deg = np.array(np.deg2rad(tab.index))
+                rad = np.array(tab['rad'])
+
+                x = np.cos(deg) * rad
+                y = np.sin(deg) * rad
+
+                cont = cont_dict[name]
+
+                kin = (np.array(tab[cont])[:-1] + np.array(tab[cont])[1:])/2
+
+                points = np.array([x, y]).T.reshape(-1, 1, 2)
+                segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+                if sif_plot_general:
+                    norm = plt.Normalize(kin_min, kin_max)
+                else:
+                    norm = plt.Normalize(kin.min(), kin.max())
+                try:
+                    cmap = settings['cmap']
+                except KeyError:
+                    cmap='jet'
+                lc = LineCollection(segments, cmap=cmap, norm=norm)
+                lc.set_array(kin)
+                lc.set_linewidth(2)
+                line = ax.add_collection(lc)
+                if rad_max < rad.max():
+                    rad_max = rad.max()
+
+        w = self.width
+        t = self.thickness
+        x_s = [-w/2, w/2, w/2, -w/2, -w/2]
+        y_s = [0, 0, t, t, 0]
+        ax.plot(x_s, y_s, color='k')
+
+        ax.scatter([0], [0], color='r', marker='+', linewidth=2)
+
+        # облако точек с sif_cloud
+        if self.sif_cloud:
+            df = self.sif_cloud.table
+            try:
+                color = settings['color_sif_cloud']
+            except KeyError:
+                color='k'
+            try:
+                marker = settings['marker_sif_cloud']
+            except KeyError:
+                marker = 'x'
+            deg = np.deg2rad(df['ang'])
+            rad = df['rad']
+            x = np.cos(deg) * rad
+            y = np.sin(deg) * rad
+            ax.scatter(x, y, color=color, marker=marker, zorder=10)
+
+        # выключение осей
+        try:
+            axis_switch =  settings['axis_switch']
+            ax.axis(axis_switch)
+        except:
+            pass
+
+        # если есть объект с изображением поверхности излома, то сохранить его
+        if isinstance(save_plot_with_image, ImageSpecimen):
+            save_plot_with_image.save_fig(figure)
+
+        # оси
+        ax.set_xlim(-self.width/2, self.width/2)
+        ax.set_ylim(0, self.thickness)
+        
+        return ax
 
 
 class UniteSpecimen(Specimen):
     def __init__(self, r_asymmetry=None):
+
+        self.type_specimen = 'special'
+
         self.r_asymmetry = r_asymmetry
         self.cge_ct = list()
         self.dir_sif = list()
