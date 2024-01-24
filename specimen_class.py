@@ -453,6 +453,7 @@ class Soi(Specimen):
         # заглушки для Specimen
         self.rad_obr = None
         self.rad_def = None
+        self.curve_front_data = None
 
     def __read_file(self, i):
         path = self.list_fronts[i]
