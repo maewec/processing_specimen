@@ -53,7 +53,7 @@ class GroupSIF:
         figure = plt.figure(figsize=(6, 4), dpi=300)
         ax = figure.add_subplot(1, 1, 1)
         for pack in self:
-            pack['sif'].plot_cge(plot_coef=plot_coef, plot_cge_ct=False, ax=ax,
+            ax = pack['sif'].plot_cge(plot_coef=plot_coef, plot_cge_ct=False, ax=ax,
                                  marker=pack['marker'], comment_num_points=comment_num_points,
                                  group=self, print_text_coef=False, markersize=markersize)
 
@@ -301,7 +301,8 @@ class GroupSIF:
         if spec.rad_obr and plot_rad_obr:
             rad, deg360 = spec._Specimen__sdvig(spec.rad_obr)
             ax.plot(deg360, rad, 'k')
-        ax.set_ylim(0, spec.rad_obr+0.5)
+        if spec.rad_obr:
+            ax.set_ylim(0, spec.rad_obr+0.5)
         if spec.rad_def and plot_rad_def:
             rad, deg360 = spec._Specimen__sdvig(spec.rad_def)
             ax.plot(deg360, rad, 'k')

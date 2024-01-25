@@ -135,6 +135,18 @@ class SIF2:
         obj_copy.define_minmax_curve()
         return obj_copy
 
+    def select_points(self, index, marker='o'):
+        """
+        Parameter:
+        index - list или int индексов таблицы
+        """
+        if isinstance(index, int):
+            index = [index]
+        obj_copy = copy.deepcopy(self)
+        obj_copy.table = obj_copy.table.loc[index]
+        obj_copy.parent = self
+        obj_copy.define_minmax_curve()
+        return obj_copy
 
     def solve_cge(self):
         """Определение коэффициентов СРТУ"""
@@ -186,7 +198,12 @@ class SIF2:
         df = self.table
         x = df['sif'].to_numpy(dtype=float)
         y = df['d'].to_numpy(dtype=float)
-        ax.plot(x, y, marker=marker, linestyle='', color=color, zorder=0, markersize=markersize)
+        if plot_coef:
+            label3 = ''
+        else:
+            label3 = label2[:-1]
+        ax.plot(x, y, marker=marker, linestyle='', color=color, zorder=0, markersize=markersize,
+                label=label3)
 
         if comment_num_points:
             for index, row in df.iterrows():
@@ -232,7 +249,7 @@ class SIF2:
 
 
         ax.legend()
-        ax.grid(which='both', alpha=0.4)
+        ax.grid(which='both', alpha=0.2)
         ax.set_xlabel('$размах\ КИН,\ кгс/мм^{3/2}$')
         ax.set_ylabel('$dl/dN,\ мм/цикл$')
         ax.set_xscale('log')
