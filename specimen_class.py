@@ -127,7 +127,7 @@ class Specimen:
         return cont_dict
 
     @staticmethod
-    def __moving_average(array, num=5):
+    def _moving_average(array, num=5):
         """Сглаживание фронтов с помощью скользящего среднего"""
         res = np.zeros_like(array)
         delta_1 = int(num/2)
@@ -143,7 +143,7 @@ class Specimen:
         for name in obj_copy.table:
             for contour in Specimen.NAMES_COUNTUR:
                 arr = np.array(obj_copy.table[name][contour])
-                obj_copy.table[name][contour] = self.__moving_average(arr, num=num)
+                obj_copy.table[name][contour] = self._moving_average(arr, num=num)
         return obj_copy
 
     def plot_geom_front(self, cont=None, plot_rad_obr=True, plot_rad_def=True,
@@ -581,6 +581,19 @@ class Soi(Specimen):
         ax.set_ylim(0, self.thickness)
         
         return ax
+
+    def copy_smooth(self, num):
+        """Создает копию объекта со сглаженными фронтами,
+        из-за этого удаляются крайние точки в количестве num/2 с каждой стороны"""
+        delta_1 = int(num/2)
+        delta_2 = num - delta_1
+        obj_copy = copy.deepcopy(self)
+        for name in obj_copy.table:
+            for contour in Specimen.NAMES_COUNTUR:
+                arr = np.array(obj_copy.table[name][contour])
+                obj_copy.table[name][contour] = self._moving_average(arr, num=num)
+            obj_copy.table[name] = obj_copy.table[name].iloc[delta_1:-delta_2]
+        return obj_copy
 
 
 class UniteSpecimen(Specimen):
