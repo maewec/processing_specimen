@@ -220,7 +220,7 @@ class SIF2:
             for cge in self.specimen.get_cge_ct():
                 c, m, name = cge
                 y = c * self._xline ** m
-                ax.plot(self._xline, y, label='ВР '+name, color='k', linestyle=linestyles[k], zorder=9)
+                ax.plot(self._xline, y, label='ОВР '+name, color='k', linestyle=linestyles[k], zorder=9)
                 k += 1
 
         if sko:

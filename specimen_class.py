@@ -515,7 +515,7 @@ class Soi(Specimen):
                 deg = np.array(np.deg2rad(tab.index))
                 rad = np.array(tab['rad'])
 
-                x = np.cos(deg) * rad
+                x = -np.cos(deg) * rad
                 y = np.sin(deg) * rad
 
                 cont = cont_dict[name]
@@ -561,7 +561,7 @@ class Soi(Specimen):
                 marker = 'x'
             deg = np.deg2rad(df['ang'])
             rad = df['rad']
-            x = np.cos(deg) * rad
+            x = -np.cos(deg) * rad
             y = np.sin(deg) * rad
             ax.scatter(x, y, color=color, marker=marker, zorder=10)
 

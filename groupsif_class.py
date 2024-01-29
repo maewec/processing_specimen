@@ -49,9 +49,10 @@ class GroupSIF:
             print('{} {}'.format(pack['id'], pack['name']))
             pack['sif'].solve_cge()
 
-    def plot_cge(self, plot_coef=True, plot_cge_ct=True, comment_num_points=False, markersize=5):
-        figure = plt.figure(figsize=(6, 4), dpi=300)
-        ax = figure.add_subplot(1, 1, 1)
+    def plot_cge(self, plot_coef=True, plot_cge_ct=True, comment_num_points=False, markersize=5, ax=None):
+        if not ax:
+            figure = plt.figure(figsize=(6, 4), dpi=300)
+            ax = figure.add_subplot(1, 1, 1)
         for pack in self:
             ax = pack['sif'].plot_cge(plot_coef=plot_coef, plot_cge_ct=False, ax=ax,
                                  marker=pack['marker'], comment_num_points=comment_num_points,
@@ -64,7 +65,7 @@ class GroupSIF:
             for cge in pack['sif'].specimen.get_cge_ct():
                 c, m, name = cge
                 y = c * xline ** m
-                ax.plot(xline, y, color='k', linestyle=linestyles[k], label='ВР '+name, zorder=9)
+                ax.plot(xline, y, color='k', linestyle=linestyles[k], label='ОВР '+name, zorder=9)
                 k += 1
         ax.legend()
 
